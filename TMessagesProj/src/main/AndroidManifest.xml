@@ -96,6 +96,9 @@
 
     <application
         android:name="org.telegram.messenger.ApplicationLoader"
+        android:label="@string/AppName"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="true"
         android:restoreAnyVersion="true"
         android:backupAgent=".BackupAgent"
@@ -116,6 +119,9 @@
             android:enabled="true"
             android:name="org.telegram.messenger.DefaultIcon"
             android:targetActivity="org.telegram.ui.LaunchActivity"
+            android:label="@string/AppName"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
             android:exported="true">
 
             <intent-filter>
@@ -208,6 +214,9 @@
 
         <activity
             android:name="org.telegram.ui.LaunchActivity"
+            android:label="@string/AppName"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
             android:theme="@style/Theme.TMessages.Start"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode|smallestScreenSize|screenLayout"
             android:supportsPictureInPicture="true"

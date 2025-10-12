@@ -104,6 +104,13 @@ Blocked chats will not appear in:
 - No hardcoded credentials in source code
 - Easy to configure per developer without committing secrets
 
+#### App Name and Icon Configuration
+**Files**: `TMessagesProj/src/main/AndroidManifest.xml`, `TMessagesProj/src/main/res/values-*/strings.xml`
+- App name: "Telegram (detox)" configured in all language files
+- Icon and label attributes added to `<application>`, `DefaultIcon` activity-alias, and `LaunchActivity`
+- Ensures proper display across all launchers (tested with Niagara Launcher)
+- Localized app names prevent fallback to default "Telegram" in non-English languages
+
 ## Installation & Deployment
 
 ### Building the APK
@@ -257,6 +264,22 @@ No popup when trying to search blocked chat
 - Chat name matches entry in blocklist
 - You're trying in-chat search (search icon in chat toolbar)
 - App was rebuilt after adding to blocklist
+
+**App Name Shows "Telegram" Instead of "Telegram (detox)"**
+```
+Launcher shows default "Telegram" name when phone language is not English
+```
+**Fix**: Already fixed - all localized `strings.xml` files updated with "Telegram (detox)"
+
+**Launcher Icon Shows Default Circle**
+```
+Launcher (e.g., Niagara) shows generic circle icon instead of Telegram arrow icon
+```
+**Fix**:
+1. Clear launcher cache: Settings → Apps → [Your Launcher] → Storage → Clear Cache
+2. Reboot phone
+3. If still not working, use launcher's manual icon picker feature
+4. Note: Icon and label attributes are properly configured in AndroidManifest.xml
 
 ## Quick Reference
 
