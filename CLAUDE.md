@@ -134,6 +134,15 @@ See the main `README.md` for detailed build instructions.
 
 ### Adding Blocked Chats
 
+**First time setup:**
+```bash
+# Copy template files to create your personal blocklist
+cp blocked_chats.txt.example blocked_chats.txt
+cp TMessagesProj/src/main/assets/blocked_chats.txt.example TMessagesProj/src/main/assets/blocked_chats.txt
+```
+
+**To add/modify blocked chats:**
+
 1. **Edit the blocklist file** in the project root:
    ```bash
    nano blocked_chats.txt  # or use any text editor
@@ -160,6 +169,8 @@ See the main `README.md` for detailed build instructions.
 - Empty lines are ignored
 - No runtime configuration - changes require rebuild (by design)
 - Keep root and assets files in sync before building
+- Personal `blocked_chats.txt` files are gitignored for privacy
+- Use `blocked_chats.txt.example` as template
 
 ### Reverting Changes
 
