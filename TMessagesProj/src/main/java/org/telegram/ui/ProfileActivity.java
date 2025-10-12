@@ -13107,7 +13107,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                 }
                                 break;
                         }
-                        cell.setText(formatString("TelegramVersion", R.string.TelegramVersion, String.format(Locale.US, "v%s (%d) %s", pInfo.versionName, code, abi)));
+                        // CUSTOM: Add custom edition name
+                        String versionText = formatString("TelegramVersion", R.string.TelegramVersion, String.format(Locale.US, "v%s (%d) %s", pInfo.versionName, code, abi));
+                        versionText += "\nNikolay Nerovny edition (detox)";
+                        cell.setText(versionText);
                     } catch (Exception e) {
                         FileLog.e(e);
                     }
