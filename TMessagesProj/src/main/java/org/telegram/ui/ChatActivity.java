@@ -34433,6 +34433,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             chatName = getCurrentChat().title;
         }
         if (chatName != null && BuildVars.isChatBlocked(chatName)) {
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Search is not available for this chat").show();
             return;
         }
 
