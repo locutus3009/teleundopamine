@@ -10,6 +10,10 @@ This is a fork of the official Telegram Android app with specific modifications 
 2. **Removing public channel discovery** - Hide unsubscribed public channels from all search results
 3. **Filtering global search** - Blocked chats are excluded from all search contexts
 
+**Current Base Version**: Telegram Android 12.0.1 (build 6166)
+**Package Name**: `org.telegram.messenger.detox`
+**Custom Features**: Chat blocklist, search filtering, channel discovery removal, auto-update disabled
+
 ## Key Modifications
 
 ### 1. Chat Blocklist System
@@ -224,10 +228,201 @@ This client is designed with these principles:
 - All modifications are client-side only
 - Uses official Telegram API with your own credentials
 
-## Upstream
+## Upstream & Fork Maintenance
 
-- **Origin**: https://github.com/DrKLO/Telegram (Official Telegram Android)
+### Repository Structure
+
+- **Upstream Origin**: https://github.com/DrKLO/Telegram (Official Telegram Android)
 - **Private Fork**: git@github.com:locutus3009/teleundopamine.git
+- **Custom Branch**: `nerovny/detox`
+
+### Maintaining Your Fork
+
+To keep your fork updated with upstream Telegram releases without heavy effort:
+
+#### Initial Setup
+
+```bash
+# Add upstream remote (one-time setup)
+cd /hdd/locutus/dev/telegram-nosearch
+git remote add upstream https://github.com/DrKLO/Telegram.git
+git fetch upstream
+
+# Verify remotes
+git remote -v
+# Should show:
+# private   git@github.com:locutus3009/teleundopamine.git (your fork)
+# upstream  https://github.com/DrKLO/Telegram.git (official)
+```
+
+#### Update Strategy: Track Stable Minor Versions
+
+**Recommended approach**: Update only on **minor version increments** (e.g., 12.0.x → 12.1.0) to avoid frequent breaking changes.
+
+**Check for new stable releases:**
+```bash
+# List upstream tags (stable releases)
+git fetch upstream --tags
+git tag -l | grep -E '^release-[0-9]+\.[0-9]+\.0$' | tail -10
+
+# Current version in your fork
+grep APP_VERSION gradle.properties
+```
+
+#### Updating to New Stable Release
+
+**Option 1: Merge (Recommended for first-time updates)**
+
+```bash
+# From your custom branch
+git checkout nerovny/detox
+git fetch upstream --tags
+
+# Merge a specific stable release (e.g., 12.1.0)
+git merge release-12.1.0
+
+# Resolve conflicts (see below)
+# After resolving all conflicts:
+git add .
+git commit -m "Merge upstream release-12.1.0"
+git push private nerovny/detox
+```
+
+**Option 2: Rebase (Clean history, more complex)**
+
+```bash
+# CAUTION: Rebase rewrites history
+git checkout nerovny/detox
+git fetch upstream --tags
+
+# Rebase your custom commits onto new release
+git rebase release-12.1.0
+
+# Resolve conflicts for each commit
+# After resolving:
+git rebase --continue
+
+# Force push (since history was rewritten)
+git push private nerovny/detox --force-with-lease
+```
+
+#### Handling Conflicts
+
+Your custom modifications will likely conflict with upstream changes. Common conflict areas:
+
+1. **BuildVars.java** - API credentials, blocklist system
+2. **DialogsSearchAdapter.java** - Search filtering
+3. **ChatActivity.java** - In-chat search blocking
+4. **SearchAdapterHelper.java** - Channel filtering
+5. **build.gradle** - Google Services disabled
+
+**Conflict resolution strategy:**
+
+```bash
+# During merge/rebase, check which files have conflicts
+git status
+
+# For each conflicting file, look for your custom modifications
+# They are marked with "// CUSTOM:" comments
+grep -n "// CUSTOM:" path/to/conflicting/file.java
+
+# Edit the file and preserve your custom changes
+# Keep markers: <<<<<<< HEAD, =======, >>>>>>>
+# Remove one side or combine both intelligently
+
+# After fixing a file:
+git add path/to/file.java
+
+# Continue merge/rebase
+git merge --continue   # if merging
+git rebase --continue  # if rebasing
+```
+
+**Quick conflict finder:**
+```bash
+# Find all your custom modifications
+grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java" -n
+```
+
+#### Testing After Update
+
+After merging/rebasing from upstream:
+
+1. **Clean build**:
+   ```bash
+   ./gradlew clean
+   ```
+
+2. **Build debug APK first** (faster iteration):
+   ```bash
+   # In Android Studio: Build → Build APK(s) with afatDebug variant
+   ```
+
+3. **Test all custom features**:
+   - [ ] Blocklist loading from assets
+   - [ ] Global search filtering (blocked chats hidden)
+   - [ ] In-chat search blocking with notification
+   - [ ] Public channel discovery disabled
+   - [ ] Custom edition name in Settings
+
+4. **Build release APK** after confirming everything works
+
+5. **Update CLAUDE.md** if upstream changes affect custom features
+
+#### Recommended Update Schedule
+
+- **Check for updates**: Monthly
+- **Apply updates**: Only on **minor version releases** (x.Y.0)
+- **Skip**: Patch releases (x.y.Z) unless critical security fixes
+- **Avoid**: Updating during major versions (X.0.0) without extensive testing
+
+#### Tracking Changes
+
+Keep a log of your merge commits to track which upstream versions you've integrated:
+
+```bash
+# View your merge history
+git log --oneline --merges --graph
+
+# View what changed in an upstream release
+git log release-12.0.0..release-12.1.0 --oneline
+```
+
+#### Emergency: Abort Merge/Rebase
+
+If conflicts become too complex:
+
+```bash
+# Abort merge
+git merge --abort
+
+# Abort rebase
+git rebase --abort
+
+# You'll return to the state before the merge/rebase started
+```
+
+### Custom Modifications Reference
+
+All custom code is marked with `// CUSTOM:` comments for easy identification during conflict resolution:
+
+```bash
+# List all custom modifications with context
+grep -r "// CUSTOM:" TMessagesProj/src/ -A 5 -B 1 --include="*.java"
+
+# Count custom modifications
+grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java" | wc -l
+```
+
+**Files with custom modifications:**
+- `BuildVars.java` - Blocklist system, API credentials, auto-update disable
+- `DialogsSearchAdapter.java` - Global search filtering
+- `ChatActivity.java` - In-chat search blocking with notification
+- `DialogsChannelsAdapter.java` - Channel discovery filtering
+- `SearchAdapterHelper.java` - Global search channel filtering
+- `ProfileActivity.java` - Custom edition branding
+- `build.gradle` files - Google Services disabled, API credentials from local.properties
+- `settings.gradle` - Huawei and HockeyApp modules disabled
 
 ## License
 
