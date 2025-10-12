@@ -119,16 +119,44 @@ User Input → DialogsSearchAdapter → filter() → (check blocklist) → Displ
 
 ## Building the Project
 
-Follow the standard Telegram Android build instructions:
+### Prerequisites
 
-1. Clone this repository
-2. Set up Android Studio with NDK
-3. Configure your `api_id` and `api_hash` from https://my.telegram.org
-4. Configure `release.keystore` and credentials in `gradle.properties`
-5. Add Firebase `google-services.json`
-6. Build the APK
+1. **Android Studio** with NDK 21.4.7075529 installed
+2. **Telegram API credentials** from https://my.telegram.org/apps
 
-See the main `README.md` for detailed build instructions.
+### Setup Steps
+
+1. **Clone this repository**
+
+2. **Configure API credentials** in `local.properties`:
+   ```bash
+   cp local.properties.example local.properties
+   ```
+
+   Edit `local.properties` and add your Telegram API credentials:
+   ```properties
+   TELEGRAM_APP_ID=YOUR_API_ID
+   TELEGRAM_APP_HASH=YOUR_API_HASH
+   ```
+
+   Get these from https://my.telegram.org/apps (login → API development tools → Create application)
+
+   **Note**: `local.properties` is gitignored and will never be committed to version control.
+
+3. **Set up blocklist** (optional):
+   ```bash
+   cp blocked_chats.txt.example blocked_chats.txt
+   # Edit blocked_chats.txt and add chat names to block
+   cp blocked_chats.txt TMessagesProj/src/main/assets/blocked_chats.txt
+   ```
+
+4. **Open project in Android Studio**
+
+5. **Build the APK**:
+   - For debug: Build → Build APK(s) with `afatDebug` variant
+   - For release: Build → Build APK(s) with `afatRelease` variant
+
+**Note**: Google Services and Firebase are disabled for custom package names in this fork.
 
 ## Customization Guide
 

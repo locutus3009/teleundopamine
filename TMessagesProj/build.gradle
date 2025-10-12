@@ -109,9 +109,13 @@ android {
         externalNativeBuild {
             cmake {
                 version '3.10.2'
-                arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-21' //, '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+                arguments '-DANDROID_STL=c++_static', '-ANDROID_PLATFORM=android-21' //, '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
             }
         }
+
+        // CUSTOM: Load Telegram API credentials from local.properties
+        buildConfigField "int", "TELEGRAM_APP_ID", getProps("TELEGRAM_APP_ID") ?: "4"
+        buildConfigField "String", "TELEGRAM_APP_HASH", "\"" + (getProps("TELEGRAM_APP_HASH") ?: "014b35b6184100b085b0d0572f9b5103") + "\""
     }
 
     buildTypes {

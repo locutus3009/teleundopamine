@@ -1,0 +1,12 @@
+## This file must *NOT* be checked into Version Control Systems,
+# as it contains information specific to your local configuration.
+#
+# Copy this file to local.properties and fill in your values.
+#
+# Location of the SDK. This is only used by Gradle.
+sdk.dir=/path/to/Android/Sdk
+
+# Telegram API credentials (get from https://my.telegram.org/apps)
+# Register a new application and copy the api_id and api_hash here
+TELEGRAM_APP_ID=YOUR_API_ID
+TELEGRAM_APP_HASH=YOUR_API_HASH
