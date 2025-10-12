@@ -33,6 +33,7 @@ import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.SQLite.SQLiteCursor;
 import org.telegram.SQLite.SQLitePreparedStatement;
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.DialogObject;
@@ -283,6 +284,19 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
     }
 
     private boolean filter(Object obj) {
+        // CUSTOM: Filter blocked chats from search results
+        String chatName = null;
+        if (obj instanceof TLRPC.User) {
+            TLRPC.User user = (TLRPC.User) obj;
+            chatName = UserObject.getUserName(user);
+        } else if (obj instanceof TLRPC.Chat) {
+            TLRPC.Chat chat = (TLRPC.Chat) obj;
+            chatName = chat.title;
+        }
+        if (chatName != null && BuildVars.isChatBlocked(chatName)) {
+            return false;
+        }
+
         if (dialogsType != DialogsActivity.DIALOGS_TYPE_START_ATTACH_BOT) {
             return true;
         }
@@ -642,8 +656,24 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
                                     continue;
                                 }
                             }
-                            searchResultMessages.add(msg);
+                            // CUSTOM: Filter messages from blocked chats
                             long dialog_id = MessageObject.getDialogId(message);
+                            String chatName = null;
+                            if (DialogObject.isUserDialog(dialog_id)) {
+                                TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(dialog_id);
+                                if (user != null) {
+                                    chatName = UserObject.getUserName(user);
+                                }
+                            } else if (DialogObject.isChatDialog(dialog_id)) {
+                                TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-dialog_id);
+                                if (chat != null) {
+                                    chatName = chat.title;
+                                }
+                            }
+                            if (chatName != null && BuildVars.isChatBlocked(chatName)) {
+                                continue;
+                            }
+                            searchResultMessages.add(msg);
                             ConcurrentHashMap<Long, Integer> read_max = message.out ? MessagesController.getInstance(currentAccount).dialogs_read_outbox_max : MessagesController.getInstance(currentAccount).dialogs_read_inbox_max;
                             Integer value = read_max.get(dialog_id);
                             if (value != null) {

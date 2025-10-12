@@ -96,7 +96,8 @@ public class DialogsChannelsAdapter extends UniversalAdapter {
                     if (obj instanceof TLRPC.Chat) {
                         final TLRPC.Chat chat = (TLRPC.Chat) obj;
                         TLRPC.Chat localChat = MessagesController.getInstance(currentAccount).getChat(chat.id);
-                        if (ChatObject.isNotInChat(chat) && (localChat == null || ChatObject.isNotInChat(localChat)))
+                        // CUSTOM: Only show subscribed channels, hide unsubscribed public channels
+                        if (!ChatObject.isNotInChat(chat) || (localChat != null && !ChatObject.isNotInChat(localChat)))
                             chats.add(chat);
                     }
                 }
@@ -115,19 +116,20 @@ public class DialogsChannelsAdapter extends UniversalAdapter {
             }
         } else {
             ArrayList<TLRPC.Chat> foundChannels = new ArrayList<>();
+            // CUSTOM: Only show subscribed channels in search results
             for (TLRPC.Chat chat : searchMyChannels) {
                 TLRPC.Chat localChat = MessagesController.getInstance(currentAccount).getChat(chat.id);
-                if (ChatObject.isNotInChat(chat) && (localChat == null || ChatObject.isNotInChat(localChat)))
+                if (!ChatObject.isNotInChat(chat) || (localChat != null && !ChatObject.isNotInChat(localChat)))
                     foundChannels.add(chat);
             }
             for (TLRPC.Chat chat : searchRecommendedChannels) {
                 TLRPC.Chat localChat = MessagesController.getInstance(currentAccount).getChat(chat.id);
-                if (ChatObject.isNotInChat(chat) && (localChat == null || ChatObject.isNotInChat(localChat)))
+                if (!ChatObject.isNotInChat(chat) || (localChat != null && !ChatObject.isNotInChat(localChat)))
                     foundChannels.add(chat);
             }
             for (TLRPC.Chat chat : searchChannels) {
                 TLRPC.Chat localChat = MessagesController.getInstance(currentAccount).getChat(chat.id);
-                if (ChatObject.isNotInChat(chat) && (localChat == null || ChatObject.isNotInChat(localChat)))
+                if (!ChatObject.isNotInChat(chat) || (localChat != null && !ChatObject.isNotInChat(localChat)))
                     foundChannels.add(chat);
             }
             if (!foundChannels.isEmpty()) {

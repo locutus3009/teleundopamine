@@ -223,7 +223,8 @@ public class SearchAdapterHelper {
                                         chat = chatsMap.get(peer.channel_id);
                                     }
                                     if (chat != null) {
-                                        if (!allowChats || canAddGroupsOnly && !ChatObject.canAddBotsToChat(chat) || !allowGlobalResults && ChatObject.isNotInChat(chat) || !filter(chat)) {
+                                        // CUSTOM: Always filter out unsubscribed channels from global search
+                                        if (!allowChats || canAddGroupsOnly && !ChatObject.canAddBotsToChat(chat) || ChatObject.isNotInChat(chat) || !filter(chat)) {
                                             continue;
                                         }
                                         globalSearch.add(chat);

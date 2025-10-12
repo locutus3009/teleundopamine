@@ -14,7 +14,9 @@ import android.os.Build;
 
 import com.android.billingclient.api.ProductDetails;
 
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 public class BuildVars {
 
@@ -91,5 +93,25 @@ public class BuildVars {
 
     public static String getSmsHash() {
         return ApplicationLoader.isStandaloneBuild() ? "w0lkcmTZkKh" : (DEBUG_VERSION ? "O2P2z+/jBpJ" : "oLeq9AcOZkT");
+    }
+
+    // CUSTOM: Blocklist of chat names to exclude from search
+    // Add chat names (first name, last name, or full name) here to prevent them from appearing in search results
+    public static final Set<String> BLOCKED_CHAT_NAMES = new HashSet<String>() {{
+        // Example: add("John Doe");
+        // Example: add("Distracting Group");
+    }};
+
+    public static boolean isChatBlocked(String chatName) {
+        if (chatName == null || BLOCKED_CHAT_NAMES.isEmpty()) {
+            return false;
+        }
+        String normalizedName = chatName.toLowerCase().trim();
+        for (String blockedName : BLOCKED_CHAT_NAMES) {
+            if (normalizedName.contains(blockedName.toLowerCase().trim())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

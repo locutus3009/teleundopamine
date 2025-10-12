@@ -34425,6 +34425,17 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     }
 
     public void openSearchWithText(String text) {
+        // CUSTOM: Block search in restricted chats
+        String chatName = null;
+        if (getCurrentUser() != null) {
+            chatName = UserObject.getUserName(getCurrentUser());
+        } else if (getCurrentChat() != null) {
+            chatName = getCurrentChat().title;
+        }
+        if (chatName != null && BuildVars.isChatBlocked(chatName)) {
+            return;
+        }
+
         boolean delay = false;
         if (savedMessagesHint != null && savedMessagesHint.shown()) {
             savedMessagesHint.hide();
