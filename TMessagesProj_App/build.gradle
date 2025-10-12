@@ -196,4 +196,5 @@ android {
     }
 }
 
-apply plugin: 'com.google.gms.google-services'
+// CUSTOM: Disable Google Services for custom package name
+// apply plugin: 'com.google.gms.google-services'
