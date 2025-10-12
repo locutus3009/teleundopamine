@@ -14,6 +14,9 @@ import android.os.Build;
 
 import com.android.billingclient.api.ProductDetails;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -96,13 +99,43 @@ public class BuildVars {
     }
 
     // CUSTOM: Blocklist of chat names to exclude from search
-    // Add chat names (first name, last name, or full name) here to prevent them from appearing in search results
-    public static final Set<String> BLOCKED_CHAT_NAMES = new HashSet<String>() {{
-        // Example: add("John Doe");
-        // Example: add("Distracting Group");
-    }};
+    // Loaded from assets/blocked_chats.txt file
+    private static final Set<String> BLOCKED_CHAT_NAMES = new HashSet<>();
+    private static boolean blocklistLoaded = false;
+
+    private static void loadBlockedChats() {
+        if (blocklistLoaded) {
+            return;
+        }
+        blocklistLoaded = true;
+
+        try {
+            if (ApplicationLoader.applicationContext == null) {
+                return;
+            }
+            InputStream is = ApplicationLoader.applicationContext.getAssets().open("blocked_chats.txt");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                // Skip comments and empty lines
+                if (!line.isEmpty() && !line.startsWith("#")) {
+                    BLOCKED_CHAT_NAMES.add(line);
+                }
+            }
+            reader.close();
+            if (LOGS_ENABLED) {
+                FileLog.d("Loaded " + BLOCKED_CHAT_NAMES.size() + " blocked chat names");
+            }
+        } catch (Exception e) {
+            if (LOGS_ENABLED) {
+                FileLog.e("Failed to load blocked_chats.txt", e);
+            }
+        }
+    }
 
     public static boolean isChatBlocked(String chatName) {
+        loadBlockedChats();
         if (chatName == null || BLOCKED_CHAT_NAMES.isEmpty()) {
             return false;
         }

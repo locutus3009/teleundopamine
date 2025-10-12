@@ -1,0 +1,23 @@
+# Telegram Anti-Dopamine - Blocked Chats Configuration
+#
+# IMPORTANT: This file exists in TWO locations:
+#   1. Project root: blocked_chats.txt (EDIT THIS ONE)
+#   2. TMessagesProj/src/main/assets/blocked_chats.txt (auto-copied before build)
+#
+# After editing this file, copy it to assets before building:
+#   cp blocked_chats.txt TMessagesProj/src/main/assets/blocked_chats.txt
+#
+# Add chat names here (one per line) to block them from search results.
+# Lines starting with # are comments and will be ignored.
+# Empty lines are also ignored.
+#
+# Matching is case-insensitive and uses substring matching.
+# For example, "John" will match "John Doe", "Johnny", etc.
+#
+# Examples:
+# Distracting Friend
+# Time Waster Group
+# News Channel Name
+#
+# Add your blocked chat names below:
+

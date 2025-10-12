@@ -14,20 +14,36 @@ This is a fork of the official Telegram Android app with specific modifications 
 
 ### 1. Chat Blocklist System
 
-**File**: `TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java`
+**Configuration File**: `blocked_chats.txt` (in project root)
 
-- **Lines 98-116**: Added `BLOCKED_CHAT_NAMES` HashSet and `isChatBlocked()` method
-- Hardcoded blocklist approach (no UI required)
+**Implementation**: `TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java`
+
+- **Lines 101-149**: Added blocklist loading from assets and `isChatBlocked()` method
+- Text file-based configuration (easy to edit, no Java knowledge required)
 - Case-insensitive substring matching for chat names
 - Works with user names, group titles, and channel names
+- Loaded from assets at runtime
+
+**Configuration File Locations**:
+- **Edit**: `blocked_chats.txt` (project root - easy to find)
+- **Deployed**: `TMessagesProj/src/main/assets/blocked_chats.txt` (bundled in APK)
 
 **How to use**:
-```java
-public static final Set<String> BLOCKED_CHAT_NAMES = new HashSet<String>() {{
-    add("Distracting Friend");
-    add("Time Waster Group");
-    add("News Channel");
-}};
+1. Edit `blocked_chats.txt` in the project root
+2. Add one chat name per line
+3. Lines starting with `#` are comments
+4. Copy to assets before building:
+   ```bash
+   cp blocked_chats.txt TMessagesProj/src/main/assets/blocked_chats.txt
+   ```
+5. Rebuild the app
+
+**Example** (`blocked_chats.txt`):
+```
+# My blocked chats
+Distracting Friend
+Time Waster Group
+News Channel
 ```
 
 ### 2. Global Search Filtering
@@ -82,9 +98,18 @@ Chats are identified by name using:
 - `chat.title` for groups and channels
 - `DialogObject` utilities for dialog type detection
 
+### Blocklist Loading
+
+- Blocklist is loaded from `assets/blocked_chats.txt` on first use
+- Lazy loading via `loadBlockedChats()` method
+- Cached in memory after first load
+- File format: one chat name per line, `#` for comments
+
 ### Search Flow
 
 ```
+App Start → (user searches) → BuildVars.isChatBlocked() → loadBlockedChats() → Read assets/blocked_chats.txt
+                                           ↓
 User Input → DialogsSearchAdapter → filter() → (check blocklist) → Display Results
                                   ↓
                           SearchAdapterHelper → globalSearch → (filter unsubscribed)
@@ -109,21 +134,32 @@ See the main `README.md` for detailed build instructions.
 
 ### Adding Blocked Chats
 
-Edit `TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java`:
+1. **Edit the blocklist file** in the project root:
+   ```bash
+   nano blocked_chats.txt  # or use any text editor
+   ```
 
-```java
-public static final Set<String> BLOCKED_CHAT_NAMES = new HashSet<String>() {{
-    add("ChatName1");
-    add("ChatName2");
-    // Add more as needed
-}};
-```
+2. **Add chat names** (one per line):
+   ```
+   Distracting Friend
+   Time Waster Group
+   News Channel Name
+   ```
 
-Notes:
+3. **Copy to assets**:
+   ```bash
+   cp blocked_chats.txt TMessagesProj/src/main/assets/blocked_chats.txt
+   ```
+
+4. **Rebuild the app**
+
+**Notes**:
 - Matching is case-insensitive
 - Substring matching (e.g., "John" matches "John Doe")
-- Rebuild the app after making changes
-- No runtime configuration - changes require recompilation (by design)
+- Lines starting with `#` are comments
+- Empty lines are ignored
+- No runtime configuration - changes require rebuild (by design)
+- Keep root and assets files in sync before building
 
 ### Reverting Changes
 
