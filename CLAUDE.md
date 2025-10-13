@@ -160,33 +160,54 @@ Commentary Channel
 - Ensures proper display across all launchers (tested with Niagara Launcher)
 - Localized app names prevent fallback to default "Telegram" in non-English languages
 
-## Installation & Deployment
+## Setup & Installation
 
-### Building the APK
+### Prerequisites
 
-1. **Set up API credentials** (one-time):
+1. **Android Studio** with NDK 21.4.7075529 installed
+2. **Telegram API credentials** from https://my.telegram.org/apps
+
+### Setup Steps
+
+1. **Clone this repository**
+
+2. **Configure API credentials** (one-time):
    ```bash
    cp local.properties.example local.properties
-   # Edit local.properties and add your API credentials from https://my.telegram.org/apps
    ```
 
-2. **Configure blocklist** (optional):
+   Edit `local.properties` and add your Telegram API credentials:
+   ```properties
+   TELEGRAM_APP_ID=YOUR_API_ID
+   TELEGRAM_APP_HASH=YOUR_API_HASH
+   ```
+
+   Get these from https://my.telegram.org/apps (login → API development tools → Create application)
+
+   **Note**: `local.properties` is gitignored and will never be committed to version control.
+
+3. **Configure blocklists** (optional):
    ```bash
+   # Chat blocklist
    cp blocked_chats.txt.example blocked_chats.txt
    # Edit blocked_chats.txt with chat names to block
    cp blocked_chats.txt TMessagesProj/src/main/assets/blocked_chats.txt
+
+   # Comment blocklist
+   cp blocked_comments.txt.example blocked_comments.txt
+   # Edit blocked_comments.txt with channels to block comments
+   cp blocked_comments.txt TMessagesProj/src/main/assets/blocked_comments.txt
    ```
 
-3. **Build** in Android Studio:
-   - Open project
-   - Select build variant: `afatRelease` for TMessagesProj_App
+4. **Open project in Android Studio**
+
+5. **Build the APK**:
+   - Select build variant: `afatRelease` for TMessagesProj_App (or `afatDebug` for faster builds)
    - Build → Build Bundle(s) / APK(s) → Build APK(s)
    - Build time: ~30-40 minutes for release, ~5-10 minutes for debug
+   - APK location: `TMessagesProj_App/build/outputs/apk/afat/release/app.apk`
 
-4. **Find APK**:
-   ```
-   TMessagesProj_App/build/outputs/apk/afat/release/app.apk
-   ```
+**Note**: Google Services and Firebase are disabled for custom package names in this fork.
 
 ### Installing on Device
 
@@ -435,47 +456,6 @@ User Input → DialogsSearchAdapter → filter() → (check blocklist) → Displ
                                   ↓
                           ChatActivity → openSearchWithText() → (check blocklist) → Allow/Block
 ```
-
-## Building the Project
-
-### Prerequisites
-
-1. **Android Studio** with NDK 21.4.7075529 installed
-2. **Telegram API credentials** from https://my.telegram.org/apps
-
-### Setup Steps
-
-1. **Clone this repository**
-
-2. **Configure API credentials** in `local.properties`:
-   ```bash
-   cp local.properties.example local.properties
-   ```
-
-   Edit `local.properties` and add your Telegram API credentials:
-   ```properties
-   TELEGRAM_APP_ID=YOUR_API_ID
-   TELEGRAM_APP_HASH=YOUR_API_HASH
-   ```
-
-   Get these from https://my.telegram.org/apps (login → API development tools → Create application)
-
-   **Note**: `local.properties` is gitignored and will never be committed to version control.
-
-3. **Set up blocklist** (optional):
-   ```bash
-   cp blocked_chats.txt.example blocked_chats.txt
-   # Edit blocked_chats.txt and add chat names to block
-   cp blocked_chats.txt TMessagesProj/src/main/assets/blocked_chats.txt
-   ```
-
-4. **Open project in Android Studio**
-
-5. **Build the APK**:
-   - For debug: Build → Build APK(s) with `afatDebug` variant
-   - For release: Build → Build APK(s) with `afatRelease` variant
-
-**Note**: Google Services and Firebase are disabled for custom package names in this fork.
 
 ## Customization Guide
 
