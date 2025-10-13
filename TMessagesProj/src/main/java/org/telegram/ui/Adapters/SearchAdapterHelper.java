@@ -230,7 +230,8 @@ public class SearchAdapterHelper {
                                         globalSearch.add(chat);
                                         globalSearchMap.put(-chat.id, chat);
                                     } else if (user != null) {
-                                        if (canAddGroupsOnly || !allowBots && user.bot || !allowSelf && user.self || !allowGlobalResults && b == 1 && !user.contact || !filter(user)) {
+                                        // CUSTOM: Always filter out non-contact bots from global search (like channels)
+                                        if (canAddGroupsOnly || !allowBots && user.bot || user.bot && !user.contact || !allowSelf && user.self || !allowGlobalResults && b == 1 && !user.contact || !filter(user)) {
                                             continue;
                                         }
                                         globalSearch.add(user);

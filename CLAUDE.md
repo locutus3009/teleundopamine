@@ -82,9 +82,10 @@ Blocked chats will not appear in:
 
 #### `TMessagesProj/src/main/java/org/telegram/ui/Adapters/SearchAdapterHelper.java`
 - **Lines 226-228**: Always filter out `ChatObject.isNotInChat()` channels from global search
+- **Line 234**: Always filter out non-contact bots (`user.bot && !user.contact`) from global search
 - Removed the `allowGlobalResults` condition that previously allowed unsubscribed channels
 
-**Result**: You can only discover channels you're already subscribed to. Public channel discovery via search is completely disabled.
+**Result**: You can only discover channels you're already subscribed to, and only bots you've added as contacts. Public channel and bot discovery via search is completely disabled.
 
 ### 5. Additional Features
 
