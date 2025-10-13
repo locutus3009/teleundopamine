@@ -40503,6 +40503,12 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
         @Override
         public void didPressCommentButton(ChatMessageCell cell) {
+            // CUSTOM: Block comment button if channel is in blocked_comments.txt
+            if (currentChat != null && currentChat.title != null && BuildVars.isCommentBlocked(currentChat.title)) {
+                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.chats_infotip, "Comments are not available for this channel").show();
+                return;
+            }
+
             MessageObject.GroupedMessages group = cell.getCurrentMessagesGroup();
             MessageObject message;
             if (group != null && !group.messages.isEmpty()) {

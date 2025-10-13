@@ -148,4 +148,54 @@ public class BuildVars {
         }
         return false;
     }
+
+    // CUSTOM: Blocklist of channel names to block comments/discussions
+    // Loaded from assets/blocked_comments.txt file
+    private static final Set<String> BLOCKED_COMMENT_CHANNELS = new HashSet<>();
+    private static boolean commentBlocklistLoaded = false;
+
+    private static void loadBlockedComments() {
+        if (commentBlocklistLoaded) {
+            return;
+        }
+        commentBlocklistLoaded = true;
+
+        try {
+            if (ApplicationLoader.applicationContext == null) {
+                return;
+            }
+            InputStream is = ApplicationLoader.applicationContext.getAssets().open("blocked_comments.txt");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                // Skip comments and empty lines
+                if (!line.isEmpty() && !line.startsWith("#")) {
+                    BLOCKED_COMMENT_CHANNELS.add(line);
+                }
+            }
+            reader.close();
+            if (LOGS_ENABLED) {
+                FileLog.d("Loaded " + BLOCKED_COMMENT_CHANNELS.size() + " blocked comment channel names");
+            }
+        } catch (Exception e) {
+            if (LOGS_ENABLED) {
+                FileLog.e("Failed to load blocked_comments.txt", e);
+            }
+        }
+    }
+
+    public static boolean isCommentBlocked(String channelName) {
+        loadBlockedComments();
+        if (channelName == null || BLOCKED_COMMENT_CHANNELS.isEmpty()) {
+            return false;
+        }
+        String normalizedName = channelName.toLowerCase().trim();
+        for (String blockedName : BLOCKED_COMMENT_CHANNELS) {
+            if (normalizedName.contains(blockedName.toLowerCase().trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

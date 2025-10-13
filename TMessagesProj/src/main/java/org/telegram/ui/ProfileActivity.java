@@ -6942,6 +6942,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         if (chatInfo == null || chatInfo.linked_chat_id == 0) {
             return;
         }
+        // CUSTOM: Block discussion button if channel is in blocked_comments.txt
+        if (currentChat != null && currentChat.title != null && BuildVars.isCommentBlocked(currentChat.title)) {
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Discussion is not available for this channel").show();
+            return;
+        }
         Bundle args = new Bundle();
         args.putLong("chat_id", chatInfo.linked_chat_id);
         if (!getMessagesController().checkCanOpenChat(args, ProfileActivity.this)) {

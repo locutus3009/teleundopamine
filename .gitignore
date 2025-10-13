@@ -17,3 +17,5 @@ TMessagesProj_AppHuawei/afat/
 # Custom: Ignore personal blocklist files (use .example as template)
 blocked_chats.txt
 TMessagesProj/src/main/assets/blocked_chats.txt
+blocked_comments.txt
+TMessagesProj/src/main/assets/blocked_comments.txt

@@ -87,7 +87,55 @@ Blocked chats will not appear in:
 
 **Result**: You can only discover channels you're already subscribed to, and only bots you've added as contacts. Public channel and bot discovery via search is completely disabled.
 
-### 5. Additional Features
+### 5. Channel Comment Blocking
+
+**Configuration File**: `blocked_comments.txt` (in project root)
+
+**Implementation**: Multiple files
+
+Similar to the chat blocklist, this feature allows you to block comments/discussions on specific channels while still being able to read the channel posts.
+
+**Configuration File Locations**:
+- **Edit**: `blocked_comments.txt` (project root)
+- **Deployed**: `TMessagesProj/src/main/assets/blocked_comments.txt` (bundled in APK)
+
+**Files Modified**:
+
+#### `TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java`
+- **Lines 152-200**: Added `isCommentBlocked()` method and blocklist loading from assets
+- Loads channel names from `assets/blocked_comments.txt`
+- Case-insensitive substring matching
+
+#### `TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java`
+- **Lines 40506-40510**: Modified `didPressCommentButton()` to block comment button clicks
+- Shows "Comments are not available for this channel" notification
+- Prevents opening discussion chat when comment button is pressed
+
+#### `TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java`
+- **Lines 6945-6949**: Modified `openDiscussion()` to block discussion button in channel settings
+- Shows "Discussion is not available for this channel" notification
+- Prevents opening discussion from channel profile/settings
+
+**How to use**:
+1. Edit `blocked_comments.txt` in the project root
+2. Add channel names (one per line)
+3. Lines starting with `#` are comments
+4. Copy to assets before building:
+   ```bash
+   cp blocked_comments.txt TMessagesProj/src/main/assets/blocked_comments.txt
+   ```
+5. Rebuild the app
+
+**Example** (`blocked_comments.txt`):
+```
+# Channels where I want to read but not engage in comments
+News Channel
+Commentary Channel
+```
+
+**Result**: You can read channel posts but cannot open comments or discussions for blocked channels. This helps maintain read-only consumption of news/information channels without getting drawn into comment sections.
+
+### 6. Additional Features
 
 #### Auto-Update Disabled
 **File**: `TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java`
@@ -286,10 +334,18 @@ Launcher (e.g., Niagara) shows generic circle icon instead of Telegram arrow ico
 
 ### Common Tasks
 
-**Update Blocklist**
+**Update Chat Blocklist**
 ```bash
 nano blocked_chats.txt  # Edit blocklist
 cp blocked_chats.txt TMessagesProj/src/main/assets/blocked_chats.txt
+# Rebuild in Android Studio
+adb install -r TMessagesProj_App/build/outputs/apk/afat/release/app.apk
+```
+
+**Update Comment Blocklist**
+```bash
+nano blocked_comments.txt  # Edit comment blocklist
+cp blocked_comments.txt TMessagesProj/src/main/assets/blocked_comments.txt
 # Rebuild in Android Studio
 adb install -r TMessagesProj_App/build/outputs/apk/afat/release/app.apk
 ```
@@ -334,8 +390,10 @@ git merge release-X.Y.0  # Replace with desired version
 
 ### File Locations
 
-- **Blocklist (edit)**: `blocked_chats.txt` (project root)
-- **Blocklist (deployed)**: `TMessagesProj/src/main/assets/blocked_chats.txt`
+- **Chat blocklist (edit)**: `blocked_chats.txt` (project root)
+- **Chat blocklist (deployed)**: `TMessagesProj/src/main/assets/blocked_chats.txt`
+- **Comment blocklist (edit)**: `blocked_comments.txt` (project root)
+- **Comment blocklist (deployed)**: `TMessagesProj/src/main/assets/blocked_comments.txt`
 - **API credentials**: `local.properties` (gitignored)
 - **Release APK**: `TMessagesProj_App/build/outputs/apk/afat/release/app.apk`
 - **Debug APK**: `TMessagesProj_App/build/outputs/apk/afat/debug/app.apk`

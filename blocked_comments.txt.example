@@ -1,0 +1,23 @@
+# Telegram Anti-Dopamine - Blocked Comments Configuration
+#
+# IMPORTANT: This file exists in TWO locations:
+#   1. Project root: blocked_comments.txt (EDIT THIS ONE)
+#   2. TMessagesProj/src/main/assets/blocked_comments.txt (auto-copied before build)
+#
+# After editing this file, copy it to assets before building:
+#   cp blocked_comments.txt TMessagesProj/src/main/assets/blocked_comments.txt
+#
+# Add channel names here (one per line) to block comments/discussions for those channels.
+# You will still be able to read the channel posts, but won't be able to open comments.
+# Lines starting with # are comments and will be ignored.
+# Empty lines are also ignored.
+#
+# Matching is case-insensitive and uses substring matching.
+# For example, "News" will match "News Channel", "Daily News", etc.
+#
+# Examples:
+# News Channel
+# Commentary Channel
+# Discussion Group
+#
+# Add your blocked comment channels below:
