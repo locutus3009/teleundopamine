@@ -8481,6 +8481,10 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             } else {
                 if (ChatObject.isChannel(currentChat) && !(currentChat instanceof TLRPC.TL_channelForbidden)) {
                     if (ChatObject.isNotInChat(currentChat)) {
+                        // CUSTOM: Block channel subscription on mobile - use desktop to subscribe
+                        BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Please use desktop Telegram to subscribe to new channels").show();
+                        return;
+                        /*
                         if (currentChat.join_request) {
 //                            showDialog(new JoinGroupAlert(context, currentChat, null, this));
                             showBottomOverlayProgress(true, true);
@@ -8519,6 +8523,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                                 getNotificationCenter().postNotificationName(NotificationCenter.peerSettingsDidLoad, dialog_id);
                             }
                         }
+                        */
                     } else {
                         toggleMute(true);
                     }
@@ -34433,7 +34438,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             chatName = getCurrentChat().title;
         }
         if (chatName != null && BuildVars.isChatBlocked(chatName)) {
-            BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Search is not available for this chat").show();
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Search is blocked for this chat (see blocked_chats.txt)").show();
             return;
         }
 
@@ -40503,10 +40508,18 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
         @Override
         public void didPressCommentButton(ChatMessageCell cell) {
-            // CUSTOM: Block comment button if channel is in blocked_comments.txt
-            if (currentChat != null && currentChat.title != null && BuildVars.isCommentBlocked(currentChat.title)) {
-                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.chats_infotip, "Comments are not available for this channel").show();
-                return;
+            // CUSTOM: Block comments on non-subscribed channels and channels in blocked_comments.txt
+            if (currentChat != null) {
+                // Block if not subscribed to the channel
+                if (ChatObject.isNotInChat(currentChat)) {
+                    BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.chats_infotip, "Subscribe to the channel first to view comments").show();
+                    return;
+                }
+                // Block if channel is in blocked_comments.txt
+                if (currentChat.title != null && BuildVars.isCommentBlocked(currentChat.title)) {
+                    BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.chats_infotip, "Comments are blocked for this channel (see blocked_comments.txt)").show();
+                    return;
+                }
             }
 
             MessageObject.GroupedMessages group = cell.getCurrentMessagesGroup();

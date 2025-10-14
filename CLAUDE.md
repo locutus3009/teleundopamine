@@ -9,10 +9,12 @@ This is a fork of the official Telegram Android app with specific modifications 
 1. **Blocking search in specific chats** - Prevent yourself from searching in distracting conversations
 2. **Removing public channel discovery** - Hide unsubscribed public channels from all search results
 3. **Filtering global search** - Blocked chats are excluded from all search contexts
+4. **Mobile subscription blocking** - Require desktop for channel subscriptions to add intentional friction
+5. **Comment access control** - Block comments on non-subscribed channels and specific blocklisted channels
 
 **Current Base Version**: Telegram Android 12.0.1 (build 6166)
 **Package Name**: `org.telegram.messenger.detox`
-**Custom Features**: Chat blocklist, search filtering, channel discovery removal, auto-update disabled
+**Custom Features**: Chat blocklist, search filtering, channel discovery removal, mobile subscription blocking, comment control, auto-update disabled
 
 ## Key Modifications
 
@@ -67,10 +69,10 @@ Blocked chats will not appear in:
 
 **File**: `TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java`
 
-- **Lines 34428-34437**: Modified `openSearchWithText()` to prevent search in blocked chats
+- **Lines 34428-34438**: Modified `openSearchWithText()` to prevent search in blocked chats
 - When you try to open search in a blocked chat, a notification popup appears
-- Uses `BulletinFactory` to show: "Search is not available for this chat"
-- Provides clear user feedback without being intrusive
+- Uses `BulletinFactory` to show: "Search is blocked for this chat (see blocked_chats.txt)"
+- Provides clear user feedback referencing the configuration file
 
 ### 4. Public Channel Discovery Removal
 
@@ -87,38 +89,33 @@ Blocked chats will not appear in:
 
 **Result**: You can only discover channels you're already subscribed to, and only bots you've added as contacts. Public channel and bot discovery via search is completely disabled.
 
-### 5. Channel Comment Blocking
+### 5. Mobile Subscription Blocking & Comment Access Control
 
-**Configuration File**: `blocked_comments.txt` (in project root)
+This feature implements a two-tier protection system to prevent impulsive channel engagement:
 
-**Implementation**: Multiple files
+**Tier 1: Block Channel Subscription on Mobile**
+**Tier 2: Block Comments on Non-Subscribed and Blocklisted Channels**
 
-Similar to the chat blocklist, this feature allows you to block comments/discussions on specific channels while still being able to read the channel posts.
+#### Design Philosophy
 
-**Configuration File Locations**:
+**Mobile = Impulsive, Desktop = Intentional**
+
+- Mobile phones are where dopamine-driven behavior happens
+- Desktop use is typically more deliberate and rational
+- Forcing subscription via desktop creates a "cooling off period"
+- Prevents the impulsive "found channel → subscribe → comment" loop
+
+#### Configuration File
+
+**File**: `blocked_comments.txt` (in project root)
+
+**Locations**:
 - **Edit**: `blocked_comments.txt` (project root)
 - **Deployed**: `TMessagesProj/src/main/assets/blocked_comments.txt` (bundled in APK)
 
-**Files Modified**:
-
-#### `TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java`
-- **Lines 152-200**: Added `isCommentBlocked()` method and blocklist loading from assets
-- Loads channel names from `assets/blocked_comments.txt`
-- Case-insensitive substring matching
-
-#### `TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java`
-- **Lines 40506-40510**: Modified `didPressCommentButton()` to block comment button clicks
-- Shows "Comments are not available for this channel" notification
-- Prevents opening discussion chat when comment button is pressed
-
-#### `TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java`
-- **Lines 6945-6949**: Modified `openDiscussion()` to block discussion button in channel settings
-- Shows "Discussion is not available for this channel" notification
-- Prevents opening discussion from channel profile/settings
-
 **How to use**:
 1. Edit `blocked_comments.txt` in the project root
-2. Add channel names (one per line)
+2. Add channel names (one per line) for subscribed channels you want to block comments on
 3. Lines starting with `#` are comments
 4. Copy to assets before building:
    ```bash
@@ -133,7 +130,71 @@ News Channel
 Commentary Channel
 ```
 
-**Result**: You can read channel posts but cannot open comments or discussions for blocked channels. This helps maintain read-only consumption of news/information channels without getting drawn into comment sections.
+#### Implementation Details
+
+**Files Modified**:
+
+##### `TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java`
+- **Lines 152-200**: Added `isCommentBlocked()` method and blocklist loading from assets
+- Loads channel names from `assets/blocked_comments.txt`
+- Case-insensitive substring matching
+
+##### `TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java`
+- **Lines 6786-6791**: Modified `onJoinClicked()` to block channel subscription on mobile
+  - Shows: "Please use desktop Telegram to subscribe to new channels"
+  - Prevents joining channels from profile/settings
+- **Lines 6951-6963**: Modified `openDiscussion()` with two-tier blocking:
+  - First check: Block if not subscribed - "Subscribe to the channel first to view discussion"
+  - Second check: Block if in `blocked_comments.txt` - "Discussion is blocked for this channel (see blocked_comments.txt)"
+
+##### `TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java`
+- **Lines 8483-8486**: Modified large JOIN button in channel content panel
+  - Blocks subscription attempt with same message as profile button
+  - Prevents the most prominent subscription path
+- **Lines 40506-40518**: Modified `didPressCommentButton()` with two-tier blocking:
+  - First check: Block if not subscribed - "Subscribe to the channel first to view comments"
+  - Second check: Block if in `blocked_comments.txt` - "Comments are blocked for this channel (see blocked_comments.txt)"
+
+#### How It Works
+
+**Discovery Flow (Mobile)**:
+1. User finds channel link in chat, similar channels, or user profile
+2. User can preview channel content (read posts)
+3. User **cannot** subscribe on mobile - must use desktop
+4. User **cannot** access comments on non-subscribed channels
+
+**Subscription Flow (Desktop Required)**:
+1. User saves channel link or remembers channel name
+2. User opens desktop Telegram (intentional action)
+3. User subscribes to channel (deliberate choice, not impulsive)
+4. User can now view channel on mobile as subscriber
+
+**Comment Access Control**:
+- **Non-subscribed channels**: Comments blocked automatically (can preview posts only)
+- **Subscribed channels**: Comments allowed UNLESS channel is in `blocked_comments.txt`
+- **Blocklisted channels**: Comments blocked even after subscription (opt-in read-only mode)
+
+#### User Feedback Messages
+
+All error messages now reference configuration files and explain the restriction:
+
+- **Subscription (both buttons)**: "Please use desktop Telegram to subscribe to new channels"
+- **Comments (not subscribed)**: "Subscribe to the channel first to view comments"
+- **Comments (blocklisted)**: "Comments are blocked for this channel (see blocked_comments.txt)"
+- **Discussion (not subscribed)**: "Subscribe to the channel first to view discussion"
+- **Discussion (blocklisted)**: "Discussion is blocked for this channel (see blocked_comments.txt)"
+
+#### Benefits
+
+1. **Prevents impulsive subscriptions** - Mobile is blocked, desktop is required
+2. **Preview without commitment** - Can read channel posts before subscribing
+3. **Natural cooling-off period** - Time delay between discovery and subscription
+4. **Reduces comment toxicity exposure** - Can't engage in random channel comments
+5. **Maintains blocklist for known problematic channels** - Even after subscription
+6. **Future-proof** - New channels are protected by default until desktop subscription
+7. **Escape hatch preserved** - `blocked_comments.txt` still works for subscribed channels
+
+**Result**: You can discover and preview channels on mobile, but must use desktop to subscribe. Comments are blocked on all non-subscribed channels and additionally on channels in your blocklist. This creates intentional friction at the right moments in the engagement funnel.
 
 ### 6. Additional Features
 

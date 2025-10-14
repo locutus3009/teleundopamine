@@ -6784,6 +6784,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void onJoinClicked(boolean fromActions) {
+        // CUSTOM: Block channel subscription on mobile - use desktop to subscribe
+        if (currentChat != null && ChatObject.isChannel(currentChat)) {
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Please use desktop Telegram to subscribe to new channels").show();
+            return;
+        }
+
         BaseFragment lastFragment = parentLayout.getLastFragment();
         final boolean[] result = new boolean[]{true};
         getMessagesController().addUserToChat(currentChat.id, getUserConfig().getCurrentUser(), 0, null, ProfileActivity.this, true, () -> {
@@ -6942,10 +6948,18 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         if (chatInfo == null || chatInfo.linked_chat_id == 0) {
             return;
         }
-        // CUSTOM: Block discussion button if channel is in blocked_comments.txt
-        if (currentChat != null && currentChat.title != null && BuildVars.isCommentBlocked(currentChat.title)) {
-            BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Discussion is not available for this channel").show();
-            return;
+        // CUSTOM: Block discussion on non-subscribed channels and channels in blocked_comments.txt
+        if (currentChat != null) {
+            // Block if not subscribed to the channel
+            if (ChatObject.isNotInChat(currentChat)) {
+                BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Subscribe to the channel first to view discussion").show();
+                return;
+            }
+            // Block if channel is in blocked_comments.txt
+            if (currentChat.title != null && BuildVars.isCommentBlocked(currentChat.title)) {
+                BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Discussion is blocked for this channel (see blocked_comments.txt)").show();
+                return;
+            }
         }
         Bundle args = new Bundle();
         args.putLong("chat_id", chatInfo.linked_chat_id);
