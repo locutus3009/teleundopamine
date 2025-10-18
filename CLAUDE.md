@@ -489,7 +489,6 @@ git merge release-X.Y.0  # Replace with desired version
 
 - **afatDebug**: Fast build (~5-10 min), debuggable, package: `org.telegram.messenger.detox.beta`
 - **afatRelease**: Optimized build (~30-40 min), production-ready, package: `org.telegram.messenger.detox`
-- **afatStandalone**: Alternative release variant
 
 ### File Locations
 
@@ -805,7 +804,7 @@ grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java" | wc -l
 - `HashtagsSearchAdapter.java` - Hashtag search filtering for non-subscribed channels
 - `ProfileActivity.java` - Custom edition branding, mobile subscription blocking, comment blocking
 - `build.gradle` files - Google Services disabled, API credentials from local.properties
-- `settings.gradle` - Huawei and HockeyApp modules disabled
+- `settings.gradle` - Optional build variants disabled (Huawei, HockeyApp, Standalone, Tests)
 
 ## License
 

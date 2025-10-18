@@ -1,7 +1,7 @@
 include ':TMessagesProj'
 include ':TMessagesProj_App'
-// CUSTOM: Disable Huawei and HockeyApp builds
+// CUSTOM: Disable optional build variants and test modules
 // include ':TMessagesProj_AppHuawei'
 // include ':TMessagesProj_AppHockeyApp'
-include ':TMessagesProj_AppStandalone'
-include ':TMessagesProj_AppTests'
+// include ':TMessagesProj_AppStandalone'
+// include ':TMessagesProj_AppTests'
