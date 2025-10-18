@@ -5,6 +5,8 @@ import android.text.TextUtils;
 import android.view.View;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ChatObject;
+import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.tgnet.ConnectionsManager;
@@ -126,10 +128,21 @@ public class HashtagsSearchAdapter extends UniversalAdapter {
                         totalCount = ((TLRPC.TL_messages_messagesSlice) msgs).count;
                     }
                     lastRate = msgs.next_rate;
-                    MessagesController.getInstance(currentAccount).putUsers(msgs.users, false);
-                    MessagesController.getInstance(currentAccount).putChats(msgs.chats, false);
+                    MessagesController controller = MessagesController.getInstance(currentAccount);
+                    controller.putUsers(msgs.users, false);
+                    controller.putChats(msgs.chats, false);
                     for (int i = 0; i < msgs.messages.size(); ++i) {
                         final TLRPC.Message msg = msgs.messages.get(i);
+
+                        // CUSTOM: Filter out messages from non-subscribed channels
+                        long dialogId = MessageObject.getDialogId(msg);
+                        if (DialogObject.isChatDialog(dialogId)) {
+                            TLRPC.Chat chat = controller.getChat(-dialogId);
+                            if (chat != null && ChatObject.isNotInChat(chat)) {
+                                continue; // Skip messages from non-subscribed channels
+                            }
+                        }
+
                         final MessageObject messageObject = new MessageObject(currentAccount, msg, false, true);
                         messageObject.setQuery(finalQuery);
                         messages.add(messageObject);

@@ -1354,10 +1354,21 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
                             publicPostsTotalCount = totalCount;
                             publicPostsLastRate = msgs.next_rate;
                             publicPostsHashtag = finalHashtag;
-                            MessagesController.getInstance(currentAccount).putUsers(msgs.users, false);
-                            MessagesController.getInstance(currentAccount).putChats(msgs.chats, false);
+                            MessagesController controller = MessagesController.getInstance(currentAccount);
+                            controller.putUsers(msgs.users, false);
+                            controller.putChats(msgs.chats, false);
                             for (int i = 0; i < msgs.messages.size(); ++i) {
                                 TLRPC.Message msg = msgs.messages.get(i);
+
+                                // CUSTOM: Filter out messages from non-subscribed channels
+                                long dialogId = MessageObject.getDialogId(msg);
+                                if (DialogObject.isChatDialog(dialogId)) {
+                                    TLRPC.Chat chat = controller.getChat(-dialogId);
+                                    if (chat != null && ChatObject.isNotInChat(chat)) {
+                                        continue; // Skip messages from non-subscribed channels
+                                    }
+                                }
+
                                 publicPosts.add(new MessageObject(currentAccount, msg, false, true));
                             }
                             if (delegate != null) {

@@ -74,7 +74,9 @@ Blocked chats will not appear in:
 - Uses `BulletinFactory` to show: "Search is blocked for this chat (see blocked_chats.txt)"
 - Provides clear user feedback referencing the configuration file
 
-### 4. Public Channel Discovery Removal
+### 4. Public Channel Discovery Removal & Hashtag/Public Posts Filtering
+
+This comprehensive filtering system blocks discovery of unsubscribed channels across all search contexts including hashtag searches and public posts.
 
 **Files Modified**:
 
@@ -87,7 +89,26 @@ Blocked chats will not appear in:
 - **Line 234**: Always filter out non-contact bots (`user.bot && !user.contact`) from global search
 - Removed the `allowGlobalResults` condition that previously allowed unsubscribed channels
 
-**Result**: You can only discover channels you're already subscribed to, and only bots you've added as contacts. Public channel and bot discovery via search is completely disabled.
+#### `TMessagesProj/src/main/java/org/telegram/ui/Components/PostsSearchContainer.java`
+- **Line 29**: Added `ChatObject` import for subscription checking
+- **Lines 248-255**: Filter messages from non-subscribed channels in "Public posts" search results
+- Uses `ChatObject.isNotInChat()` to skip messages from channels you haven't joined
+
+#### `TMessagesProj/src/main/java/org/telegram/ui/Components/HashtagsSearchAdapter.java`
+- **Lines 8-9**: Added `ChatObject` and `DialogObject` imports
+- **Lines 137-144**: Filter messages from non-subscribed channels in hashtag search results
+- Processes hashtag searches (e.g., "#news", "$crypto") and only shows subscribed sources
+
+#### `TMessagesProj/src/main/java/org/telegram/ui/Adapters/DialogsSearchAdapter.java`
+- **Lines 1363-1370**: Filter hashtag search results in "Chats" tab to exclude non-subscribed channels
+- Handles preview of hashtag results shown inline in main search
+
+**Result**: You can only discover channels you're already subscribed to, and only bots you've added as contacts. Public channel and bot discovery via search is completely disabled across all search contexts:
+- Regular channel search in "Channels" tab
+- Global search results
+- Hashtag searches (e.g., "#эро", "$btc")
+- "Public posts" tab results
+- Inline hashtag previews in "Chats" tab
 
 ### 5. Mobile Subscription Blocking & Comment Access Control
 
@@ -718,7 +739,11 @@ After merging/rebasing from upstream:
    - [ ] Blocklist loading from assets
    - [ ] Global search filtering (blocked chats hidden)
    - [ ] In-chat search blocking with notification
-   - [ ] Public channel discovery disabled
+   - [ ] Public channel discovery disabled (all tabs: Chats, Channels, Public posts)
+   - [ ] Hashtag search filtering (only subscribed channels appear)
+   - [ ] Public posts tab filtering (only subscribed channels appear)
+   - [ ] Mobile subscription blocking (cannot join channels on mobile)
+   - [ ] Comment blocking (non-subscribed and blocklisted channels)
    - [ ] Custom edition name in Settings
 
 4. **Build release APK** after confirming everything works
@@ -772,11 +797,13 @@ grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java" | wc -l
 
 **Files with custom modifications:**
 - `BuildVars.java` - Blocklist system, API credentials, auto-update disable
-- `DialogsSearchAdapter.java` - Global search filtering
-- `ChatActivity.java` - In-chat search blocking with notification
+- `DialogsSearchAdapter.java` - Global search filtering, hashtag search filtering, blocked chat filtering
+- `ChatActivity.java` - In-chat search blocking with notification, mobile subscription blocking, comment blocking
 - `DialogsChannelsAdapter.java` - Channel discovery filtering
-- `SearchAdapterHelper.java` - Global search channel filtering
-- `ProfileActivity.java` - Custom edition branding
+- `SearchAdapterHelper.java` - Global search channel filtering, bot filtering
+- `PostsSearchContainer.java` - Public posts tab filtering for non-subscribed channels
+- `HashtagsSearchAdapter.java` - Hashtag search filtering for non-subscribed channels
+- `ProfileActivity.java` - Custom edition branding, mobile subscription blocking, comment blocking
 - `build.gradle` files - Google Services disabled, API credentials from local.properties
 - `settings.gradle` - Huawei and HockeyApp modules disabled
 

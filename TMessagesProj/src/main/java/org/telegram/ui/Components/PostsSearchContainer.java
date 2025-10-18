@@ -26,6 +26,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
@@ -244,6 +245,15 @@ public class PostsSearchContainer extends FrameLayout {
                 final ArrayList<MessageObject> messages = news ? newsMessages : this.messages;
                 final boolean firstMessages = messages.isEmpty();
                 for (TLRPC.Message message : r.messages) {
+                    // CUSTOM: Filter out messages from non-subscribed channels
+                    long dialogId = MessageObject.getDialogId(message);
+                    if (DialogObject.isChatDialog(dialogId)) {
+                        TLRPC.Chat chat = messagesController.getChat(-dialogId);
+                        if (chat != null && ChatObject.isNotInChat(chat)) {
+                            continue; // Skip messages from non-subscribed channels
+                        }
+                    }
+
                     final MessageObject msg = new MessageObject(currentAccount, message, false, false);
                     if (!news) {
                         msg.setQuery(req.query);
