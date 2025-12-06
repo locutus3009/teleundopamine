@@ -22091,6 +22091,11 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public ChannelRecommendations getChannelRecommendations(long dialogId) {
+        // CUSTOM: Disable Similar Channels/Bots feature completely to prevent discovery
+        // This blocks the "Similar Channels" section in channel profiles and the recommendations
+        // shown after joining a channel. Users can't discover new channels through this feature.
+        return null;
+        /*
         if (cachedChannelRecommendations == null) {
             cachedChannelRecommendations = new HashMap<>();
         }
@@ -22150,6 +22155,7 @@ public class MessagesController extends BaseController implements NotificationCe
             }
         }));
         return rec;
+        */
     }
 
     private HashSet<Long> loadingReactionTags;

@@ -11,10 +11,13 @@ This is a fork of the official Telegram Android app with specific modifications 
 3. **Filtering global search** - Blocked chats are excluded from all search contexts
 4. **Mobile subscription blocking** - Require desktop for channel subscriptions to add intentional friction
 5. **Comment access control** - Block comments on non-subscribed channels and specific blocklisted channels
+6. **Link isolation** - Block navigation to non-subscribed channels via URLs, forwards, and @mentions
+7. **Invite link blocking** - Prevent joining groups/channels via invite links on mobile
+8. **Similar channels disabled** - Completely remove the "Similar Channels" recommendation feature
 
 **Current Base Version**: Telegram Android 12.2.3 (build 6298)
 **Package Name**: `org.telegram.messenger.detox`
-**Custom Features**: Chat blocklist, search filtering, channel discovery removal, mobile subscription blocking, comment control, auto-update disabled
+**Custom Features**: Chat blocklist, search filtering, channel discovery removal, mobile subscription blocking, comment control, link isolation, invite blocking, similar channels disabled, auto-update disabled
 
 ## Key Modifications
 
@@ -217,7 +220,101 @@ All error messages now reference configuration files and explain the restriction
 
 **Result**: You can discover and preview channels on mobile, but must use desktop to subscribe. Comments are blocked on all non-subscribed channels and additionally on channels in your blocklist. This creates intentional friction at the right moments in the engagement funnel.
 
-### 6. Additional Features
+### 6. Link Isolation System
+
+This feature blocks navigation to non-subscribed channels through various click paths, creating a comprehensive isolation from discovery.
+
+#### What's Blocked
+
+1. **Forward Header Clicks**: When a message is forwarded from a channel, clicking "Forwarded from: Channel Name" is blocked if you're not subscribed to that channel
+2. **URL Links**: Clicking `t.me/channelname` or `@channelname` links in messages is blocked for non-subscribed channels
+3. **@Mention Clicks**: Clicking @bot mentions is blocked for bots you haven't added as contacts
+4. **tg:// Deep Links**: All `tg://resolve` and similar protocol links are blocked for non-subscribed targets
+
+#### What's Allowed
+
+- Links to channels you're already subscribed to work normally
+- Links to regular users (non-bot) work normally
+- Links to bots you've added as contacts work normally
+- Forward headers from subscribed channels work normally
+
+#### Implementation Details
+
+**Files Modified**:
+
+##### `TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java`
+- **Lines 37772-37777**: Modified `didPressChannelAvatar()` to block forward header clicks to non-subscribed channels
+  - Checks `ChatObject.isNotInChat(chat)` before allowing navigation
+  - Shows: "Cannot open non-subscribed channels from mobile (use desktop)"
+- **Lines 37930-37935**: Modified `didPressUserAvatar()` to block forward header clicks to non-contact bots
+  - Checks `user.bot && !user.contact` before allowing navigation
+  - Shows: "Cannot open non-subscribed bots from mobile (use desktop)"
+- **Lines 35138-35143**: Modified `URLSpanUserMention` handler to block @mention clicks to non-contact bots
+  - Shows: "Cannot open non-subscribed bots from mobile (use desktop)"
+
+##### `TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java`
+- **Lines 4507-4535**: Added blocking in username resolution callback
+  - For channels (`peerId < 0`): Checks `ChatObject.isNotInChat(chat)`
+  - For bots (`peerId > 0`): Checks `user.bot && !user.contact`
+  - Shows: "Cannot open non-subscribed channels/bots from mobile (use desktop)"
+
+#### User Feedback Messages
+
+- **Forward headers (channels)**: "Cannot open non-subscribed channels from mobile (use desktop)"
+- **Forward headers (bots)**: "Cannot open non-subscribed bots from mobile (use desktop)"
+- **URL links**: "Cannot open non-subscribed channels/bots from mobile (use desktop)"
+- **@mentions (bots)**: "Cannot open non-subscribed bots from mobile (use desktop)"
+
+### 7. Invite Link Blocking
+
+All invite links are blocked on mobile to prevent impulsive joining of new groups/channels.
+
+#### What's Blocked
+
+- `t.me/+AbCdEfG` style invite links
+- `t.me/joinchat/...` style invite links
+- `tg://join?invite=...` deep links
+
+#### Implementation Details
+
+**File**: `TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java`
+- **Lines 5115-5123**: Added blocking at start of `group != null` handler
+  - Intercepts before any API call is made
+  - Shows: "Cannot join via invite links on mobile (use desktop)"
+  - Original invite handling code is commented out but preserved
+
+#### User Feedback Message
+
+- "Cannot join via invite links on mobile (use desktop)"
+
+### 8. Similar Channels Disabled
+
+The "Similar Channels" and "Similar Bots" recommendation feature is completely disabled.
+
+#### What's Disabled
+
+- "Similar Channels" section in channel profiles (SharedMediaLayout)
+- "Similar Bots" section in bot profiles
+- Channel recommendations shown after joining a channel (ChannelRecommendationsCell)
+- The API call to fetch recommendations is never made
+
+#### Implementation Details
+
+**File**: `TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java`
+- **Lines 22093-22097**: Modified `getChannelRecommendations()` to return null immediately
+  - Prevents API call to `TL_channels_getChannelRecommendations`
+  - `ChannelRecommendations.hasRecommendations()` returns false for all channels
+  - UI components gracefully hide when no recommendations are available
+  - Original code is commented out but preserved
+
+#### Benefits
+
+1. **Removes discovery vector** - Can't find new channels through recommendations
+2. **Reduces distraction** - No "look at these similar channels" prompts
+3. **Saves bandwidth** - No API calls for recommendations
+4. **Clean UI** - No recommendation UI elements displayed
+
+### 9. Additional Features
 
 #### Auto-Update Disabled
 **File**: `TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java`
@@ -807,12 +904,14 @@ grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java" | wc -l
 **Files with custom modifications:**
 - `BuildVars.java` - Blocklist system, API credentials, auto-update disable
 - `DialogsSearchAdapter.java` - Global search filtering, hashtag search filtering, blocked chat filtering
-- `ChatActivity.java` - In-chat search blocking with notification, mobile subscription blocking, comment blocking
+- `ChatActivity.java` - In-chat search blocking with notification, mobile subscription blocking, comment blocking, forward header blocking, @mention blocking
 - `DialogsChannelsAdapter.java` - Channel discovery filtering
 - `SearchAdapterHelper.java` - Global search channel filtering, bot filtering
 - `PostsSearchContainer.java` - Public posts tab filtering for non-subscribed channels
 - `HashtagsSearchAdapter.java` - Hashtag search filtering for non-subscribed channels
 - `ProfileActivity.java` - Custom edition branding, mobile subscription blocking, comment blocking
+- `LaunchActivity.java` - URL link blocking for non-subscribed channels/bots, invite link blocking
+- `MessagesController.java` - Similar channels feature disabled
 - `build.gradle` files - Google Services disabled, API credentials from local.properties
 - `settings.gradle` - Optional build variants disabled (Huawei, HockeyApp, Standalone, Tests)
 

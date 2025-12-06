@@ -4504,6 +4504,35 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                 }
                 if (!LaunchActivity.this.isFinishing()) {
                     boolean hideProgressDialog = true;
+                    // CUSTOM: Block URL navigation to non-subscribed channels and non-contact bots
+                    // Users can only open channels they're subscribed to and bots they've added
+                    if (peerId != null) {
+                        if (peerId < 0) {
+                            // It's a channel/group - check if not subscribed
+                            TLRPC.Chat chat = MessagesController.getInstance(intentAccount).getChat(-peerId);
+                            if (chat != null && ChatObject.isNotInChat(chat)) {
+                                BulletinFactory.global().createErrorBulletin("Cannot open non-subscribed channels/bots from mobile (use desktop)").show();
+                                try {
+                                    dismissLoading.run();
+                                } catch (Exception e) {
+                                    FileLog.e(e);
+                                }
+                                return;
+                            }
+                        } else if (peerId > 0) {
+                            // It's a user - check if it's a non-contact bot
+                            TLRPC.User user = MessagesController.getInstance(intentAccount).getUser(peerId);
+                            if (user != null && user.bot && !user.contact) {
+                                BulletinFactory.global().createErrorBulletin("Cannot open non-subscribed channels/bots from mobile (use desktop)").show();
+                                try {
+                                    dismissLoading.run();
+                                } catch (Exception e) {
+                                    FileLog.e(e);
+                                }
+                                return;
+                            }
+                        }
+                    }
                     if (liveStory && peerId != null) {
                         hideProgressDialog = false;
                         MessagesController.getInstance(currentAccount).getStoriesController().resolveLiveStoryLink(peerId, storyItem -> {
@@ -5112,6 +5141,16 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                 }
             });
         } else if (group != null) {
+            // CUSTOM: Block all invite links on mobile (t.me/+..., t.me/joinchat/..., tg://join?invite=...)
+            // Users must use desktop Telegram to join via invite links
+            BulletinFactory.global().createErrorBulletin("Cannot join via invite links on mobile (use desktop)").show();
+            try {
+                dismissLoading.run();
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+            return;
+            /*
             if (state == 0) {
                 final TLRPC.TL_messages_checkChatInvite req = new TLRPC.TL_messages_checkChatInvite();
                 req.hash = group;
@@ -5268,6 +5307,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                     });
                 }, ConnectionsManager.RequestFlagFailOnServerErrors);
             }
+            */
         } else if (sticker != null) {
             if (!mainFragmentsStack.isEmpty()) {
                 TLRPC.TL_inputStickerSetShortName stickerset = new TLRPC.TL_inputStickerSetShortName();

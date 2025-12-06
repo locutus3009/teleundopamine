@@ -35135,7 +35135,12 @@ public class ChatActivity extends BaseFragment implements
         } else if (url instanceof URLSpanUserMention) {
             TLRPC.User user = getMessagesController().getUser(Utilities.parseLong(((URLSpanUserMention) url).getURL()));
             if (user != null) {
-                MessagesController.getInstance(currentAccount).openChatOrProfileWith(user, null, ChatActivity.this, 0, false);
+                // CUSTOM: Block @mention clicks for non-contact bots
+                if (user.bot && !user.contact) {
+                    BulletinFactory.of(ChatActivity.this).createErrorBulletin("Cannot open non-subscribed bots from mobile (use desktop)").show();
+                } else {
+                    MessagesController.getInstance(currentAccount).openChatOrProfileWith(user, null, ChatActivity.this, 0, false);
+                }
             }
             if (longPress && cell != null) {
                 cell.resetPressedLink(-1);
@@ -37769,6 +37774,12 @@ public class ChatActivity extends BaseFragment implements
                 processRowSelect(cell, true, touchX, touchY);
                 return;
             }
+            // CUSTOM: Block forward header clicks to non-subscribed channels
+            // Only allow navigation to channels user is already subscribed to
+            if (asForward && ChatObject.isNotInChat(chat)) {
+                BulletinFactory.of(ChatActivity.this).createErrorBulletin("Cannot open non-subscribed channels from mobile (use desktop)").show();
+                return;
+            }
             if (!asForward && chat != null && chat.signature_profiles) {
                 MessageObject msg = cell.getMessageObject();
                 if (msg != null && msg.getDialogId() != UserObject.REPLY_BOT) {
@@ -37919,6 +37930,12 @@ public class ChatActivity extends BaseFragment implements
             }
             if (cell != null && cell.getMessageObject() != null && cell.getMessageObject().isSponsored()) {
                 didPressInstantButton(cell, 10);
+                return;
+            }
+            // CUSTOM: Block forward header clicks to non-contact bots
+            // Regular users are allowed, but bots require being added as contact first
+            if (asForward && user != null && user.bot && !user.contact) {
+                BulletinFactory.of(ChatActivity.this).createErrorBulletin("Cannot open non-subscribed bots from mobile (use desktop)").show();
                 return;
             }
             openProfile(user, ChatObject.isForum(currentChat) || isThreadChat());
