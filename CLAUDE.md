@@ -227,9 +227,10 @@ This feature blocks navigation to non-subscribed channels through various click 
 #### What's Blocked
 
 1. **Forward Header Clicks**: When a message is forwarded from a channel, clicking "Forwarded from: Channel Name" is blocked if you're not subscribed to that channel
-2. **URL Links**: Clicking `t.me/channelname` or `@channelname` links in messages is blocked for non-subscribed channels
-3. **@Mention Clicks**: Clicking @bot mentions is blocked for bots you haven't added as contacts
+2. **URL Links**: Clicking `t.me/channelname` links in messages is blocked for non-subscribed channels
+3. **@Mention Clicks**: Clicking `@channel_name` or `@bot_name` mentions in messages is blocked for non-subscribed channels and non-contact bots
 4. **tg:// Deep Links**: All `tg://resolve` and similar protocol links are blocked for non-subscribed targets
+5. **Article Channel Links**: Channel links within Instant View articles are blocked for non-subscribed channels
 
 #### What's Allowed
 
@@ -249,8 +250,20 @@ This feature blocks navigation to non-subscribed channels through various click 
 - **Lines 37930-37935**: Modified `didPressUserAvatar()` to block forward header clicks to non-contact bots
   - Checks `user.bot && !user.contact` before allowing navigation
   - Shows: "Cannot open non-subscribed bots from mobile (use desktop)"
-- **Lines 35138-35143**: Modified `URLSpanUserMention` handler to block @mention clicks to non-contact bots
-  - Shows: "Cannot open non-subscribed bots from mobile (use desktop)"
+- **Lines 35135-35161**: Modified `URLSpanUserMention` handler to block @mention clicks
+  - For channels (negative IDs): Checks `ChatObject.isNotInChat(chat)` before navigation
+  - For bots (positive IDs): Checks `user.bot && !user.contact` before navigation
+  - Shows appropriate error message for blocked navigation
+
+##### `TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java`
+- **Lines 21283-21302**: Modified `openByUserName()` to block cached entity navigation
+  - For channels: Checks `ChatObject.isNotInChat(chat)` before opening
+  - For bots: Checks `user.bot && !user.contact` before opening
+  - Shows: "Cannot open non-subscribed channels/bots from mobile (use desktop)"
+- **Lines 21324-21341**: Modified async username resolution callback
+  - For channels (`peerId < 0`): Checks `ChatObject.isNotInChat(chat)`
+  - For bots (`peerId > 0`): Checks `user.bot && !user.contact`
+  - Shows appropriate error message for blocked navigation
 
 ##### `TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java`
 - **Lines 4507-4535**: Added blocking in username resolution callback
@@ -263,6 +276,7 @@ This feature blocks navigation to non-subscribed channels through various click 
 - **Forward headers (channels)**: "Cannot open non-subscribed channels from mobile (use desktop)"
 - **Forward headers (bots)**: "Cannot open non-subscribed bots from mobile (use desktop)"
 - **URL links**: "Cannot open non-subscribed channels/bots from mobile (use desktop)"
+- **@mentions (channels)**: "Cannot open non-subscribed channels from mobile (use desktop)"
 - **@mentions (bots)**: "Cannot open non-subscribed bots from mobile (use desktop)"
 
 ### 7. Invite Link Blocking
@@ -936,7 +950,7 @@ grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java" | wc -l
 - `HashtagsSearchAdapter.java` - Hashtag search filtering for non-subscribed channels
 - `ProfileActivity.java` - Custom edition branding, mobile subscription blocking, comment blocking, profile channel links blocking
 - `LaunchActivity.java` - URL link blocking for non-subscribed channels/bots, invite link blocking
-- `MessagesController.java` - Similar channels feature disabled
+- `MessagesController.java` - Similar channels feature disabled, @mention navigation blocking for channels/bots
 - `build.gradle` files - Google Services disabled, API credentials from local.properties
 - `settings.gradle` - Optional build variants disabled (Huawei, HockeyApp, Standalone, Tests)
 

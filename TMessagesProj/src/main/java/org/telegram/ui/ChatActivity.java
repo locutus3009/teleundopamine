@@ -35133,13 +35133,26 @@ public class ChatActivity extends BaseFragment implements
                 cell.resetPressedLink(-1);
             }
         } else if (url instanceof URLSpanUserMention) {
-            TLRPC.User user = getMessagesController().getUser(Utilities.parseLong(((URLSpanUserMention) url).getURL()));
-            if (user != null) {
-                // CUSTOM: Block @mention clicks for non-contact bots
-                if (user.bot && !user.contact) {
-                    BulletinFactory.of(ChatActivity.this).createErrorBulletin("Cannot open non-subscribed bots from mobile (use desktop)").show();
-                } else {
-                    MessagesController.getInstance(currentAccount).openChatOrProfileWith(user, null, ChatActivity.this, 0, false);
+            long id = Utilities.parseLong(((URLSpanUserMention) url).getURL());
+            if (id < 0) {
+                // CUSTOM: Block @mention clicks for non-subscribed channels
+                TLRPC.Chat chat = getMessagesController().getChat(-id);
+                if (chat != null) {
+                    if (ChatObject.isNotInChat(chat)) {
+                        BulletinFactory.of(ChatActivity.this).createErrorBulletin("Cannot open non-subscribed channels from mobile (use desktop)").show();
+                    } else {
+                        MessagesController.getInstance(currentAccount).openChatOrProfileWith(null, chat, ChatActivity.this, 1, false);
+                    }
+                }
+            } else {
+                TLRPC.User user = getMessagesController().getUser(id);
+                if (user != null) {
+                    // CUSTOM: Block @mention clicks for non-contact bots
+                    if (user.bot && !user.contact) {
+                        BulletinFactory.of(ChatActivity.this).createErrorBulletin("Cannot open non-subscribed bots from mobile (use desktop)").show();
+                    } else {
+                        MessagesController.getInstance(currentAccount).openChatOrProfileWith(user, null, ChatActivity.this, 0, false);
+                    }
                 }
             }
             if (longPress && cell != null) {

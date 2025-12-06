@@ -21281,8 +21281,24 @@ public class MessagesController extends BaseController implements NotificationCe
             }
         }
         if (user != null) {
+            // CUSTOM: Block @mention navigation to non-contact bots
+            if (user.bot && !user.contact) {
+                if (progress != null) {
+                    progress.end();
+                }
+                BulletinFactory.of(fragment).createErrorBulletin("Cannot open non-subscribed bots from mobile (use desktop)").show();
+                return;
+            }
             openChatOrProfileWith(user, null, fragment, type, false);
         } else if (chat != null) {
+            // CUSTOM: Block @mention navigation to non-subscribed channels
+            if (ChatObject.isNotInChat(chat)) {
+                if (progress != null) {
+                    progress.end();
+                }
+                BulletinFactory.of(fragment).createErrorBulletin("Cannot open non-subscribed channels from mobile (use desktop)").show();
+                return;
+            }
             openChatOrProfileWith(null, chat, fragment, 1, false);
         } else {
             if (fragment.getParentActivity() == null) {
@@ -21307,9 +21323,21 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
                 if (peerId != null) {
                     if (peerId < 0) {
-                        openChatOrProfileWith(null, getChat(-peerId), fragment, 1, false);
+                        // CUSTOM: Block @mention navigation to non-subscribed channels (async path)
+                        TLRPC.Chat resolvedChat = getChat(-peerId);
+                        if (resolvedChat != null && ChatObject.isNotInChat(resolvedChat)) {
+                            BulletinFactory.of(fragment).createErrorBulletin("Cannot open non-subscribed channels from mobile (use desktop)").show();
+                            return;
+                        }
+                        openChatOrProfileWith(null, resolvedChat, fragment, 1, false);
                     } else {
-                        openChatOrProfileWith(getUser(peerId), null, fragment, type, false);
+                        // CUSTOM: Block @mention navigation to non-contact bots (async path)
+                        TLRPC.User resolvedUser = getUser(peerId);
+                        if (resolvedUser != null && resolvedUser.bot && !resolvedUser.contact) {
+                            BulletinFactory.of(fragment).createErrorBulletin("Cannot open non-subscribed bots from mobile (use desktop)").show();
+                            return;
+                        }
+                        openChatOrProfileWith(resolvedUser, null, fragment, type, false);
                     }
                 } else {
                     if (fragment.getParentActivity() != null) {
