@@ -242,6 +242,14 @@ All error messages now reference configuration files and explain the restriction
 - Ensures proper display across all launchers (tested with Niagara Launcher)
 - Localized app names prevent fallback to default "Telegram" in non-English languages
 
+#### R8 Minification Disabled
+**Files**: All `build.gradle` files in app modules
+- `minifyEnabled false` for all build types (debug, release, standalone, etc.)
+- Dramatically reduces build time (~2-3 minutes instead of ~8 minutes)
+- APK size increases (~150MB instead of ~70MB)
+- No functional difference - only affects build optimization
+- Suitable for personal builds where APK size doesn't matter
+
 ## Setup & Installation
 
 ### Prerequisites
@@ -286,7 +294,7 @@ All error messages now reference configuration files and explain the restriction
 5. **Build the APK**:
    - Select build variant: `afatRelease` for TMessagesProj_App (or `afatDebug` for faster builds)
    - Build → Build Bundle(s) / APK(s) → Build APK(s)
-   - Build time: ~30-40 minutes for release, ~5-10 minutes for debug
+   - Build time: ~2-3 minutes (R8 minification disabled for faster builds)
    - APK location: `TMessagesProj_App/build/outputs/apk/afat/release/app.apk`
 
 **Note**: Google Services and Firebase are disabled for custom package names in this fork.
@@ -487,8 +495,10 @@ git merge release-X.Y.0  # Replace with desired version
 
 ### Build Variants
 
-- **afatDebug**: Fast build (~5-10 min), debuggable, package: `org.telegram.messenger.detox.beta`
-- **afatRelease**: Optimized build (~30-40 min), production-ready, package: `org.telegram.messenger.detox`
+- **afatDebug**: Fast build (~2-3 min), debuggable, package: `org.telegram.messenger.detox.beta`
+- **afatRelease**: Fast build (~2-3 min), production-ready, package: `org.telegram.messenger.detox`
+
+Note: R8 minification is disabled for all build types, resulting in larger APKs (~150MB) but much faster build times.
 
 ### File Locations
 
