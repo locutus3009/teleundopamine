@@ -463,6 +463,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     public boolean myProfile;
     public boolean openGifts;
     public int openGiftsCollection;
+    public boolean openGiftsUpgradable;
     private boolean openedGifts;
     public boolean openCommonChats;
     public int initialStoryAlbum;
@@ -2061,6 +2062,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         reportSpam = arguments.getBoolean("reportSpam", false);
         myProfile = arguments.getBoolean("my_profile", false);
         openGifts = arguments.getBoolean("open_gifts", false);
+        openGiftsUpgradable = arguments.getBoolean("open_gifts_upgradable", false);
         openGiftsCollection = arguments.getInt("open_gifts_collection", 0);
         openCommonChats = arguments.getBoolean("open_common", false);
         initialStoryAlbum = arguments.getInt("open_story_album_id", -1);
@@ -6048,7 +6050,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     getNotificationCenter().postNotificationName(NotificationCenter.needDeleteDialog, dialogId, user, currentChat, param);
                 }, getResourceProvider());
             } else {
-                getMessagesController().unblockPeer(userId, () -> getSendMessagesHelper().sendMessage(SendMessagesHelper.SendMessageParams.of("/start", userId, null, null, null, false, null, null, null, true, 0, null, false)));
+                getMessagesController().unblockPeer(userId, () -> getSendMessagesHelper().sendMessage(SendMessagesHelper.SendMessageParams.of("/start", userId)));
                 finishFragment();
             }
         }
@@ -6784,12 +6786,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void onJoinClicked(boolean fromActions) {
-        // CUSTOM: Block channel subscription on mobile - use desktop to subscribe
-        if (currentChat != null && ChatObject.isChannel(currentChat)) {
-            BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Please use desktop Telegram to subscribe to new channels").show();
-            return;
-        }
-
         BaseFragment lastFragment = parentLayout.getLastFragment();
         final boolean[] result = new boolean[]{true};
         getMessagesController().addUserToChat(currentChat.id, getUserConfig().getCurrentUser(), 0, null, ProfileActivity.this, true, () -> {
@@ -6947,19 +6943,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private void openDiscussion() {
         if (chatInfo == null || chatInfo.linked_chat_id == 0) {
             return;
-        }
-        // CUSTOM: Block discussion on non-subscribed channels and channels in blocked_comments.txt
-        if (currentChat != null) {
-            // Block if not subscribed to the channel
-            if (ChatObject.isNotInChat(currentChat)) {
-                BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Subscribe to the channel first to view discussion").show();
-                return;
-            }
-            // Block if channel is in blocked_comments.txt
-            if (currentChat.title != null && BuildVars.isCommentBlocked(currentChat.title)) {
-                BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Discussion is blocked for this channel (see blocked_comments.txt)").show();
-                return;
-            }
         }
         Bundle args = new Bundle();
         args.putLong("chat_id", chatInfo.linked_chat_id);
@@ -9700,6 +9683,14 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         checkPhotoDescriptionAlpha();
     }
 
+    public float getInternalTranslationX() {
+        return listView != null ? listView.getTranslationX() : 0;
+    }
+
+    public float getInternalVisibility() {
+        return listView != null ? listView.getAlpha() : 0;
+    }
+
     @Override
     public void onTransitionAnimationEnd(boolean isOpen, boolean backward) {
         if (isOpen) {
@@ -12316,10 +12307,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         presentFragment(new ChatActivity(args), true);
         removeSelfFromStack();
         TLRPC.User user = getMessagesController().getUser(userId);
-        getSendMessagesHelper().sendMessage(SendMessagesHelper.SendMessageParams.of(user, did, null, null, null, null, notify, scheduleDate));
+        getSendMessagesHelper().sendMessage(SendMessagesHelper.SendMessageParams.of(user, did, null, null, null, null, notify, scheduleDate, 0));
         if (!TextUtils.isEmpty(message)) {
             AccountInstance accountInstance = AccountInstance.getInstance(currentAccount);
-            SendMessagesHelper.prepareSendingText(accountInstance, message.toString(), did, notify, scheduleDate, 0);
+            SendMessagesHelper.prepareSendingText(accountInstance, message.toString(), did, notify, scheduleDate, 0, 0);
         }
         return true;
     }
@@ -12936,7 +12927,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
                 case VIEW_TYPE_TEXT_DETAIL_MULTILINE:
                 case VIEW_TYPE_TEXT_DETAIL:
-                    final TextDetailCell textDetailCell = new TextDetailCell(mContext, resourcesProvider, viewType == VIEW_TYPE_TEXT_DETAIL_MULTILINE) {
+                    final TextDetailCell textDetailCell = new TextDetailCell(mContext, resourcesProvider, viewType == VIEW_TYPE_TEXT_DETAIL_MULTILINE, false) {
                         @Override
                         protected int processColor(int color) {
                             return dontApplyPeerColor(color, false);
@@ -14485,7 +14476,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         set.setExpanded(LiteMode.FLAGS_CHAT, true);
                         set.scrollToFlags(LiteMode.FLAG_CHAT_SPOILER);
                     }),
-                    SharedConfig.getDevicePerformanceClass() >= SharedConfig.PERFORMANCE_CLASS_AVERAGE ? new SearchResult(326 /* for compatibility */, getString(R.string.LiteOptionsBlur), null, getString(R.string.PowerUsage), getString(R.string.LiteOptionsChat), R.drawable.msg2_battery, () -> {
+                    SharedConfig.getDevicePerformanceClass() >= SharedConfig.PERFORMANCE_CLASS_AVERAGE ? new SearchResult(326 /* for compatibility */, getString(R.string.LiteOptionsBlur2), null, getString(R.string.PowerUsage), getString(R.string.LiteOptionsChat), R.drawable.msg2_battery, () -> {
                         LiteModeSettingsActivity set = new LiteModeSettingsActivity();
                         presentFragment(set);
                         set.setExpanded(LiteMode.FLAGS_CHAT, true);
@@ -16098,7 +16089,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     params.transitionFromLeft = true;
                     params.allowNestedScroll = false;
                     showAsSheet(new PrivacyControlActivity(PrivacyControlActivity.PRIVACY_RULES_TYPE_BIRTHDAY), params);
-                }, getResourceProvider()).create());
+                }, false, getResourceProvider()).create());
             });
             itemOptions.add(R.drawable.msg_delete, getString(R.string.Remove), true, () -> {
                 AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
