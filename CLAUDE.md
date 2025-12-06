@@ -17,7 +17,7 @@ This is a fork of the official Telegram Android app with specific modifications 
 
 **Current Base Version**: Telegram Android 12.2.3 (build 6298)
 **Package Name**: `org.telegram.messenger.detox`
-**Custom Features**: Chat blocklist, search filtering, channel discovery removal, mobile subscription blocking, comment control, link isolation, invite blocking, similar channels disabled, auto-update disabled
+**Custom Features**: Chat blocklist, search filtering, channel discovery removal, mobile subscription blocking, comment control, link isolation, invite blocking, similar channels disabled, profile channel blocking, auto-update disabled
 
 ## Key Modifications
 
@@ -314,7 +314,32 @@ The "Similar Channels" and "Similar Bots" recommendation feature is completely d
 3. **Saves bandwidth** - No API calls for recommendations
 4. **Clean UI** - No recommendation UI elements displayed
 
-### 9. Additional Features
+### 9. Profile Channel Links Blocked
+
+User profiles can display a linked "personal channel" as a native UI element. This feature is completely disabled to prevent channel discovery through user profiles.
+
+#### What's Disabled
+
+- "Personal Channel" row in user profile pages
+- The clickable cell showing channel name, avatar, and subscriber count
+- Any navigation to channels through this UI element
+
+#### Implementation Details
+
+**File**: `TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java`
+- **Lines 10594-10603**: Commented out `channelRow` and `channelDividerRow` creation in `updateRowsIds()`
+  - The row is never added to the profile layout
+  - Original code preserved as comments for future reference
+  - Click handlers become unreachable since `channelRow` remains `-1`
+
+#### Benefits
+
+1. **Removes discovery vector** - Can't find channels through user profiles
+2. **Clean UI** - No channel link visible in profiles
+3. **Consistent with other blocks** - Matches the approach used for Similar Channels
+4. **No broken UI elements** - Hiding is cleaner than blocking clicks
+
+### 10. Additional Features
 
 #### Auto-Update Disabled
 **File**: `TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java`
@@ -909,7 +934,7 @@ grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java" | wc -l
 - `SearchAdapterHelper.java` - Global search channel filtering, bot filtering
 - `PostsSearchContainer.java` - Public posts tab filtering for non-subscribed channels
 - `HashtagsSearchAdapter.java` - Hashtag search filtering for non-subscribed channels
-- `ProfileActivity.java` - Custom edition branding, mobile subscription blocking, comment blocking
+- `ProfileActivity.java` - Custom edition branding, mobile subscription blocking, comment blocking, profile channel links blocking
 - `LaunchActivity.java` - URL link blocking for non-subscribed channels/bots, invite link blocking
 - `MessagesController.java` - Similar channels feature disabled
 - `build.gradle` files - Google Services disabled, API credentials from local.properties

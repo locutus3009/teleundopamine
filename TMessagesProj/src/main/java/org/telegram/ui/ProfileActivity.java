@@ -10591,13 +10591,16 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 boolean hasInfo = userInfo != null && !TextUtils.isEmpty(userInfo.about) || user != null && !TextUtils.isEmpty(username);
                 boolean hasPhone = user != null && (!TextUtils.isEmpty(user.phone) || !TextUtils.isEmpty(vcardPhone));
 
-                if (userInfo != null && (userInfo.flags2 & 64) != 0 && (profileChannelMessageFetcher == null || !profileChannelMessageFetcher.loaded || profileChannelMessageFetcher.messageObject != null)) {
-                    final TLRPC.Chat channel = getMessagesController().getChat(userInfo.personal_channel_id);
-                    if (channel != null && (ChatObject.isPublic(channel) || !ChatObject.isNotInChat(channel))) {
-                        channelRow = rowCount++;
-                        channelDividerRow = rowCount++;
-                    }
-                }
+                // CUSTOM: Block profile channel links - completely hide personal channel row in user profiles
+                // This prevents discovery of channels through user profiles on mobile.
+                // Original code preserved below (commented out):
+                // if (userInfo != null && (userInfo.flags2 & 64) != 0 && (profileChannelMessageFetcher == null || !profileChannelMessageFetcher.loaded || profileChannelMessageFetcher.messageObject != null)) {
+                //     final TLRPC.Chat channel = getMessagesController().getChat(userInfo.personal_channel_id);
+                //     if (channel != null && (ChatObject.isPublic(channel) || !ChatObject.isNotInChat(channel))) {
+                //         channelRow = rowCount++;
+                //         channelDividerRow = rowCount++;
+                //     }
+                // }
                 infoStartRow = rowCount;
                 if (actionsView == null) {
                     infoHeaderRow = rowCount++;
