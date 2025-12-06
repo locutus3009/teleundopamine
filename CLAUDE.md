@@ -12,7 +12,7 @@ This is a fork of the official Telegram Android app with specific modifications 
 4. **Mobile subscription blocking** - Require desktop for channel subscriptions to add intentional friction
 5. **Comment access control** - Block comments on non-subscribed channels and specific blocklisted channels
 
-**Current Base Version**: Telegram Android 12.0.1 (build 6166)
+**Current Base Version**: Telegram Android 12.2.3 (build 6298)
 **Package Name**: `org.telegram.messenger.detox`
 **Custom Features**: Chat blocklist, search filtering, channel discovery removal, mobile subscription blocking, comment control, auto-update disabled
 
@@ -69,7 +69,7 @@ Blocked chats will not appear in:
 
 **File**: `TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java`
 
-- **Lines 34428-34438**: Modified `openSearchWithText()` to prevent search in blocked chats
+- **Lines 33720-33730**: Modified `openSearchWithText()` to prevent search in blocked chats
 - When you try to open search in a blocked chat, a notification popup appears
 - Uses `BulletinFactory` to show: "Search is blocked for this chat (see blocked_chats.txt)"
 - Provides clear user feedback referencing the configuration file
@@ -161,18 +161,18 @@ Commentary Channel
 - Case-insensitive substring matching
 
 ##### `TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java`
-- **Lines 6786-6791**: Modified `onJoinClicked()` to block channel subscription on mobile
+- **Lines 6789-6793**: Modified `onJoinClicked()` to block channel subscription on mobile
   - Shows: "Please use desktop Telegram to subscribe to new channels"
   - Prevents joining channels from profile/settings
-- **Lines 6951-6963**: Modified `openDiscussion()` with two-tier blocking:
+- **Lines 6953-6965**: Modified `openDiscussion()` with two-tier blocking:
   - First check: Block if not subscribed - "Subscribe to the channel first to view discussion"
   - Second check: Block if in `blocked_comments.txt` - "Discussion is blocked for this channel (see blocked_comments.txt)"
 
 ##### `TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java`
-- **Lines 8483-8486**: Modified large JOIN button in channel content panel
+- **Lines 8284-8287**: Modified large JOIN button in channel content panel
   - Blocks subscription attempt with same message as profile button
   - Prevents the most prominent subscription path
-- **Lines 40506-40518**: Modified `didPressCommentButton()` with two-tier blocking:
+- **Lines 39830-39842**: Modified `didPressCommentButton()` with two-tier blocking:
   - First check: Block if not subscribed - "Subscribe to the channel first to view comments"
   - Second check: Block if in `blocked_comments.txt` - "Comments are blocked for this channel (see blocked_comments.txt)"
 
