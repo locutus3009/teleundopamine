@@ -37787,10 +37787,11 @@ public class ChatActivity extends BaseFragment implements
                 processRowSelect(cell, true, touchX, touchY);
                 return;
             }
-            // CUSTOM: Block forward header clicks to non-subscribed channels
-            // Only allow navigation to channels user is already subscribed to
-            if (asForward && ChatObject.isNotInChat(chat)) {
-                BulletinFactory.of(ChatActivity.this).createErrorBulletin("Cannot open non-subscribed channels from mobile (use desktop)").show();
+            // CUSTOM: Mobile subscription blocking - Channel reply icon and forward header paths
+            // Block navigation to non-subscribed channels from both forward headers AND channel reply icons
+            if (ChatObject.isNotInChat(chat)) {
+                FileLog.d("[BYPASS_FIX] Channel avatar click blocked for non-subscribed channel: " + chat.title + " (asForward=" + asForward + ")");
+                BulletinFactory.of(ChatActivity.this).createErrorBulletin("Subscribing to channels on mobile is disabled. Please use desktop.").show();
                 return;
             }
             if (!asForward && chat != null && chat.signature_profiles) {

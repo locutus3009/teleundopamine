@@ -21214,6 +21214,23 @@ public class MessagesController extends BaseController implements NotificationCe
         if (user == null && chat == null || fragment == null) {
             return;
         }
+
+        // CUSTOM: Mobile subscription blocking - Story link path
+        // Block navigation to non-subscribed channels (e.g., from Story links)
+        if (chat != null && ChatObject.isChannel(chat) && ChatObject.isNotInChat(chat)) {
+            FileLog.d("[BYPASS_FIX] Story/link click blocked for non-subscribed channel: " + chat.title);
+            BulletinFactory.of(fragment).createErrorBulletin("Subscribing to channels on mobile is disabled. Please use desktop.").show();
+            return;
+        }
+
+        // CUSTOM: Mobile subscription blocking - Story link path (bots)
+        // Block navigation to non-contact bots (e.g., from Story links)
+        if (user != null && user.bot && !user.contact) {
+            FileLog.d("[BYPASS_FIX] Story/link click blocked for non-contact bot: " + UserObject.getUserName(user));
+            BulletinFactory.of(fragment).createErrorBulletin("Subscribing to channels on mobile is disabled. Please use desktop.").show();
+            return;
+        }
+
         String reason;
         if (chat != null) {
             reason = getRestrictionReason(chat.restriction_reason);

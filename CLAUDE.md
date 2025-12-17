@@ -79,6 +79,8 @@ grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java"
 |---------|------|-------------------------|
 | Forward header (channels) | `ChatActivity.java` | `didPressChannelAvatar()` callback |
 | Forward header (bots) | `ChatActivity.java` | `didPressUserAvatar()` callback |
+| Channel reply icon clicks | `ChatActivity.java` | `didPressChannelAvatar()` - non-forward path |
+| Story channel links | `MessagesController.java` | `openChatOrProfileWith()` |
 | @mention clicks | `ChatActivity.java` | `URLSpanUserMention` handler |
 | Username navigation (cached) | `MessagesController.java` | `openByUserName()` - cached entity path |
 | Username navigation (async) | `MessagesController.java` | `openByUserName()` - async callback |
@@ -620,6 +622,8 @@ Use this checklist after any modification. Each feature has specific verificatio
 | @mention blocked (channel) | 1. See `@channel_name` in message (non-subscribed) 2. Tap mention | Same notification as above |
 | @mention blocked (bot) | 1. See `@bot_name` in message (non-contact) 2. Tap mention | Notification: "Cannot open non-subscribed bots from mobile (use desktop)" |
 | Forward header blocked | 1. See forwarded message from non-subscribed channel 2. Tap "Forwarded from:" header | Appropriate blocking notification |
+| Channel reply icon blocked | 1. Find message posted "as a channel" (non-subscribed) 2. Tap channel icon/avatar | Notification: "Subscribing to channels on mobile is disabled. Please use desktop." |
+| Story channel link blocked | 1. Open Story with channel link (non-subscribed) 2. Tap channel link | Notification: "Subscribing to channels on mobile is disabled. Please use desktop." |
 | Invite links blocked | 1. Tap `t.me/+AbCdEfG` link | Notification: "Cannot join via invite links on mobile (use desktop)" |
 
 ### Similar Channels
@@ -1202,14 +1206,14 @@ grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java" | wc -l
 **Modified files:**
 - `BuildVars.java` - Blocklist system, API credentials, auto-update disable
 - `DialogsSearchAdapter.java` - Global search filtering, hashtag search filtering, blocked chat filtering
-- `ChatActivity.java` - In-chat search blocking with notification, mobile subscription blocking, comment blocking, forward header blocking, @mention blocking
+- `ChatActivity.java` - In-chat search blocking with notification, mobile subscription blocking, comment blocking, forward header blocking, channel reply icon blocking, @mention blocking
 - `DialogsChannelsAdapter.java` - Channel discovery filtering
 - `SearchAdapterHelper.java` - Global search channel filtering, bot filtering
 - `PostsSearchContainer.java` - Public posts tab filtering for non-subscribed channels
 - `HashtagsSearchAdapter.java` - Hashtag search filtering for non-subscribed channels
 - `ProfileActivity.java` - Custom edition branding, mobile subscription blocking, comment blocking, profile channel links blocking
 - `LaunchActivity.java` - URL link blocking for non-subscribed channels/bots, invite link blocking
-- `MessagesController.java` - Similar channels feature disabled, @mention navigation blocking for channels/bots
+- `MessagesController.java` - Similar channels feature disabled, @mention navigation blocking for channels/bots, Story link blocking
 - `build.gradle` files - Google Services disabled, API credentials from local.properties
 - `settings.gradle` - Optional build variants disabled (Huawei, HockeyApp, Standalone, Tests)
 
