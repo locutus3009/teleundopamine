@@ -146,7 +146,7 @@ This is a fork of the official Telegram Android app with specific modifications 
 7. **Invite link blocking** - Prevent joining groups/channels via invite links on mobile
 8. **Similar channels disabled** - Completely remove the "Similar Channels" recommendation feature
 
-**Current Base Version**: Telegram Android 12.2.3 (build 6298)
+**Current Base Version**: Telegram Android 12.5.1 (build 6580)
 **Package Name**: `org.telegram.messenger.detox`
 **Custom Features**: Chat blocklist, search filtering, channel discovery removal, mobile subscription blocking, comment control, link isolation, invite blocking, similar channels disabled, profile channel blocking, auto-update disabled
 
@@ -155,12 +155,6 @@ This is a fork of the official Telegram Android app with specific modifications 
 ## Key Modifications
 
 ### 1. Chat Blocklist System
-
-**Quick Reference**:
-- **Files**: `BuildVars.java`, `DialogsSearchAdapter.java`, `ChatActivity.java`
-- **Functions**: `loadBlockedChats()`, `isChatBlocked()`, `filter()`, `openSearchWithText()`
-- **Config**: `blocked_chats.txt` (root) → `assets/blocked_chats.txt`
-- **User message**: "Search is blocked for this chat (see blocked_chats.txt)"
 
 **Implementation**:
 
@@ -177,13 +171,13 @@ This is a fork of the official Telegram Android app with specific modifications 
 
 **How to use**:
 1. Edit `blocked_chats.txt` in the project root
-2. Add one chat name per line
-3. Lines starting with `#` are comments
+2. Add one chat name per line (case-insensitive substring match; `#` for comments; empty lines ignored)
+3. Personal `blocked_chats.txt` is gitignored for privacy - use `blocked_chats.txt.example` as template
 4. Copy to assets before building:
    ```bash
    cp blocked_chats.txt TMessagesProj/src/main/assets/blocked_chats.txt
    ```
-5. Rebuild the app
+5. Rebuild the app (no runtime configuration - changes require rebuild by design)
 
 **Example** (`blocked_chats.txt`):
 ```
@@ -195,29 +189,15 @@ News Channel
 
 ### 2. Global Search Filtering
 
-**Quick Reference**:
-- **Files**: `DialogsSearchAdapter.java`
-- **Functions**: `filter()` method, message search result processing loop
-- **Config**: Uses `blocked_chats.txt` blocklist via `BuildVars.isChatBlocked()`
-
 **Implementation**:
 
 `TMessagesProj/src/main/java/org/telegram/ui/Adapters/DialogsSearchAdapter.java`:
 - `filter()` method - Excludes blocked chats from dialog/user search results
 - Message search loop - Filters messages from blocked chats during search result processing
 
-Blocked chats will not appear in:
-- Dialog/chat search
-- User search
-- Message search across all chats
+Blocked chats will not appear in dialog/chat search, user search, or message search across all chats.
 
 ### 3. In-Chat Search Blocking with User Feedback
-
-**Quick Reference**:
-- **Files**: `ChatActivity.java`
-- **Functions**: `openSearchWithText()`
-- **Config**: Uses `blocked_chats.txt` blocklist via `BuildVars.isChatBlocked()`
-- **User message**: "Search is blocked for this chat (see blocked_chats.txt)"
 
 **Implementation**:
 
@@ -228,12 +208,7 @@ Blocked chats will not appear in:
 
 ### 4. Public Channel Discovery Removal & Hashtag/Public Posts Filtering
 
-**Quick Reference**:
-- **Files**: `DialogsChannelsAdapter.java`, `SearchAdapterHelper.java`, `PostsSearchContainer.java`, `HashtagsSearchAdapter.java`, `DialogsSearchAdapter.java`
-- **Functions**: Recommendation/search loops in each adapter, global search processing
-- **Config**: None (hardcoded to filter non-subscribed channels)
-
-This comprehensive filtering system blocks discovery of unsubscribed channels across all search contexts including hashtag searches and public posts.
+This comprehensive filtering system blocks discovery of unsubscribed channels across all search contexts including hashtag searches and public posts. You can only discover channels you're already subscribed to, and only bots you've added as contacts. Public channel and bot discovery is completely disabled in: regular channel search ("Channels" tab), global search results, hashtag searches (e.g., "#news", "$btc"), "Public posts" tab, and inline hashtag previews in "Chats" tab.
 
 **Implementation**:
 
@@ -257,20 +232,7 @@ This comprehensive filtering system blocks discovery of unsubscribed channels ac
 `TMessagesProj/src/main/java/org/telegram/ui/Adapters/DialogsSearchAdapter.java`:
 - Hashtag results loop - Filters hashtag search results in "Chats" tab to exclude non-subscribed channels
 
-**Result**: You can only discover channels you're already subscribed to, and only bots you've added as contacts. Public channel and bot discovery via search is completely disabled across all search contexts:
-- Regular channel search in "Channels" tab
-- Global search results
-- Hashtag searches (e.g., "#news", "$btc")
-- "Public posts" tab results
-- Inline hashtag previews in "Chats" tab
-
 ### 5. Mobile Subscription Blocking & Comment Access Control
-
-**Quick Reference**:
-- **Files**: `BuildVars.java`, `ProfileActivity.java`, `ChatActivity.java`
-- **Functions**: `isCommentBlocked()`, `onJoinClicked()`, `openDiscussion()`, `didPressCommentButton()`, JOIN button handler
-- **Config**: `blocked_comments.txt` (root) → `assets/blocked_comments.txt`
-- **User messages**: See "User Feedback Messages" below
 
 This feature implements a two-tier protection system to prevent impulsive channel engagement:
 
@@ -332,95 +294,42 @@ Commentary Channel
   - First check: Block if not subscribed - "Subscribe to the channel first to view comments"
   - Second check: Block if in `blocked_comments.txt` - "Comments are blocked for this channel (see blocked_comments.txt)"
 
-#### How It Works
-
-**Discovery Flow (Mobile)**:
-1. User finds channel link in chat, similar channels, or user profile
-2. User can preview channel content (read posts)
-3. User **cannot** subscribe on mobile - must use desktop
-4. User **cannot** access comments on non-subscribed channels
-
-**Subscription Flow (Desktop Required)**:
-1. User saves channel link or remembers channel name
-2. User opens desktop Telegram (intentional action)
-3. User subscribes to channel (deliberate choice, not impulsive)
-4. User can now view channel on mobile as subscriber
-
-**Comment Access Control**:
+**Access control summary**:
 - **Non-subscribed channels**: Comments blocked automatically (can preview posts only)
 - **Subscribed channels**: Comments allowed UNLESS channel is in `blocked_comments.txt`
 - **Blocklisted channels**: Comments blocked even after subscription (opt-in read-only mode)
 
-#### User Feedback Messages
-
-All error messages reference configuration files and explain the restriction:
-
-- **Subscription (both buttons)**: "Please use desktop Telegram to subscribe to new channels"
-- **Comments (not subscribed)**: "Subscribe to the channel first to view comments"
-- **Comments (blocklisted)**: "Comments are blocked for this channel (see blocked_comments.txt)"
-- **Discussion (not subscribed)**: "Subscribe to the channel first to view discussion"
-- **Discussion (blocklisted)**: "Discussion is blocked for this channel (see blocked_comments.txt)"
-
-#### Benefits
-
-1. **Prevents impulsive subscriptions** - Mobile is blocked, desktop is required
-2. **Preview without commitment** - Can read channel posts before subscribing
-3. **Natural cooling-off period** - Time delay between discovery and subscription
-4. **Reduces comment toxicity exposure** - Can't engage in random channel comments
-5. **Maintains blocklist for known problematic channels** - Even after subscription
-6. **Future-proof** - New channels are protected by default until desktop subscription
-7. **Escape hatch preserved** - `blocked_comments.txt` still works for subscribed channels
-
-**Result**: You can discover and preview channels on mobile, but must use desktop to subscribe. Comments are blocked on all non-subscribed channels and additionally on channels in your blocklist. This creates intentional friction at the right moments in the engagement funnel.
+**Result**: You can discover and preview channels on mobile, but must use desktop to subscribe. This creates intentional friction at the right moments in the engagement funnel.
 
 ### 6. Link Isolation System
 
-**Quick Reference**:
-- **Files**: `ChatActivity.java`, `MessagesController.java`, `LaunchActivity.java`
-- **Functions**: `didPressChannelAvatar()`, `didPressUserAvatar()`, `URLSpanUserMention` handler, `openByUserName()`, URL intent handler
-- **Config**: None (hardcoded to check subscription status)
-- **User message**: "Cannot open non-subscribed channels from mobile (use desktop)"
-
 This feature blocks navigation to non-subscribed channels through various click paths, creating a comprehensive isolation from discovery.
 
-#### What's Blocked
+**What's blocked**: forward header clicks, `t.me/channelname` URL links, `@channel_name`/`@bot_name` mentions, `tg://` deep links, and Instant View article channel links — all blocked for non-subscribed channels and non-contact bots. Links to subscribed channels, regular users (non-bot), and contact bots work normally.
 
-1. **Forward Header Clicks**: When a message is forwarded from a channel, clicking "Forwarded from: Channel Name" is blocked if you're not subscribed to that channel
-2. **URL Links**: Clicking `t.me/channelname` links in messages is blocked for non-subscribed channels
-3. **@Mention Clicks**: Clicking `@channel_name` or `@bot_name` mentions in messages is blocked for non-subscribed channels and non-contact bots
-4. **tg:// Deep Links**: All `tg://resolve` and similar protocol links are blocked for non-subscribed targets
-5. **Article Channel Links**: Channel links within Instant View articles are blocked for non-subscribed channels
-
-#### What's Allowed
-
-- Links to channels you're already subscribed to work normally
-- Links to regular users (non-bot) work normally
-- Links to bots you've added as contacts work normally
-- Forward headers from subscribed channels work normally
+**User Feedback Messages**:
+- Forward headers (channels): "Cannot open non-subscribed channels from mobile (use desktop)"
+- Forward headers (bots): "Cannot open non-subscribed bots from mobile (use desktop)"
+- URL links / @mentions / deep links: "Cannot open non-subscribed channels/bots from mobile (use desktop)"
 
 #### Implementation Details
 
 `TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java`:
 - `didPressChannelAvatar()` callback - Blocks forward header clicks to non-subscribed channels
   - Checks `ChatObject.isNotInChat(chat)` before allowing navigation
-  - Shows: "Cannot open non-subscribed channels from mobile (use desktop)"
 - `didPressUserAvatar()` callback - Blocks forward header clicks to non-contact bots
   - Checks `user.bot && !user.contact` before allowing navigation
-  - Shows: "Cannot open non-subscribed bots from mobile (use desktop)"
 - `URLSpanUserMention` handler - Blocks @mention clicks
   - For channels (negative IDs): Checks `ChatObject.isNotInChat(chat)` before navigation
   - For bots (positive IDs): Checks `user.bot && !user.contact` before navigation
-  - Shows appropriate error message for blocked navigation
 
 `TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java`:
 - `openByUserName()` method (cached entity path) - Blocks cached entity navigation
   - For channels: Checks `ChatObject.isNotInChat(chat)` before opening
   - For bots: Checks `user.bot && !user.contact` before opening
-  - Shows: "Cannot open non-subscribed channels/bots from mobile (use desktop)"
 - `openByUserName()` method (async callback) - Blocks async username resolution
   - For channels (`peerId < 0`): Checks `ChatObject.isNotInChat(chat)`
   - For bots (`peerId > 0`): Checks `user.bot && !user.contact`
-  - Shows appropriate error message for blocked navigation
 
 `TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java`:
 - Username resolution callback - Blocks URL intent navigation
@@ -428,29 +337,9 @@ This feature blocks navigation to non-subscribed channels through various click 
   - For bots (`peerId > 0`): Checks `user.bot && !user.contact`
   - Shows: "Cannot open non-subscribed channels/bots from mobile (use desktop)"
 
-#### User Feedback Messages
-
-- **Forward headers (channels)**: "Cannot open non-subscribed channels from mobile (use desktop)"
-- **Forward headers (bots)**: "Cannot open non-subscribed bots from mobile (use desktop)"
-- **URL links**: "Cannot open non-subscribed channels/bots from mobile (use desktop)"
-- **@mentions (channels)**: "Cannot open non-subscribed channels from mobile (use desktop)"
-- **@mentions (bots)**: "Cannot open non-subscribed bots from mobile (use desktop)"
-
 ### 7. Invite Link Blocking
 
-**Quick Reference**:
-- **Files**: `LaunchActivity.java`
-- **Functions**: `group != null` handler branch in URL processing
-- **Config**: None (all invite links blocked)
-- **User message**: "Cannot join via invite links on mobile (use desktop)"
-
-All invite links are blocked on mobile to prevent impulsive joining of new groups/channels.
-
-#### What's Blocked
-
-- `t.me/+AbCdEfG` style invite links
-- `t.me/joinchat/...` style invite links
-- `tg://join?invite=...` deep links
+All invite links are blocked on mobile to prevent impulsive joining of new groups/channels. Blocked link formats: `t.me/+AbCdEfG`, `t.me/joinchat/...`, `tg://join?invite=...`.
 
 #### Implementation Details
 
@@ -460,25 +349,9 @@ All invite links are blocked on mobile to prevent impulsive joining of new group
   - Shows: "Cannot join via invite links on mobile (use desktop)"
   - Original invite handling code is commented out but preserved
 
-#### User Feedback Message
-
-- "Cannot join via invite links on mobile (use desktop)"
-
 ### 8. Similar Channels Disabled
 
-**Quick Reference**:
-- **Files**: `MessagesController.java`
-- **Functions**: `getChannelRecommendations()`
-- **Config**: None (feature completely disabled)
-
-The "Similar Channels" and "Similar Bots" recommendation feature is completely disabled.
-
-#### What's Disabled
-
-- "Similar Channels" section in channel profiles (SharedMediaLayout)
-- "Similar Bots" section in bot profiles
-- Channel recommendations shown after joining a channel (ChannelRecommendationsCell)
-- The API call to fetch recommendations is never made
+The "Similar Channels" and "Similar Bots" recommendation feature is completely disabled. This covers: the "Similar Channels" section in channel profiles (SharedMediaLayout), "Similar Bots" section in bot profiles, channel recommendations shown after joining (ChannelRecommendationsCell), and the API call to fetch recommendations.
 
 #### Implementation Details
 
@@ -489,27 +362,9 @@ The "Similar Channels" and "Similar Bots" recommendation feature is completely d
   - UI components gracefully hide when no recommendations are available
   - Original code is commented out but preserved
 
-#### Benefits
-
-1. **Removes discovery vector** - Can't find new channels through recommendations
-2. **Reduces distraction** - No "look at these similar channels" prompts
-3. **Saves bandwidth** - No API calls for recommendations
-4. **Clean UI** - No recommendation UI elements displayed
-
 ### 9. Profile Channel Links Blocked
 
-**Quick Reference**:
-- **Files**: `ProfileActivity.java`
-- **Functions**: `updateRowsIds()` - channelRow/channelDividerRow disabled
-- **Config**: None (feature completely disabled)
-
-User profiles can display a linked "personal channel" as a native UI element. This feature is completely disabled to prevent channel discovery through user profiles.
-
-#### What's Disabled
-
-- "Personal Channel" row in user profile pages
-- The clickable cell showing channel name, avatar, and subscriber count
-- Any navigation to channels through this UI element
+User profiles can display a linked "personal channel" as a native UI element (clickable cell showing channel name, avatar, subscriber count). This feature is completely disabled to prevent channel discovery through user profiles.
 
 #### Implementation Details
 
@@ -519,20 +374,9 @@ User profiles can display a linked "personal channel" as a native UI element. Th
   - Original code preserved as comments for future reference
   - Click handlers become unreachable since `channelRow` remains `-1`
 
-#### Benefits
-
-1. **Removes discovery vector** - Can't find channels through user profiles
-2. **Clean UI** - No channel link visible in profiles
-3. **Consistent with other blocks** - Matches the approach used for Similar Channels
-4. **No broken UI elements** - Hiding is cleaner than blocking clicks
-
 ### 10. Additional Features
 
 #### Auto-Update Disabled
-
-**Quick Reference**:
-- **Files**: `BuildVars.java`
-- **Config**: `CHECK_UPDATES = false`
 
 `TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java`:
 - `CHECK_UPDATES = false` - Prevents Telegram's built-in update mechanism from prompting updates
@@ -540,28 +384,18 @@ User profiles can display a linked "personal channel" as a native UI element. Th
 
 #### Custom Edition Branding
 
-**Quick Reference**:
-- **Files**: `ProfileActivity.java`
-- **Location**: Version row display in Settings
-
 `TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java`:
 - Settings screen displays: "Nikolay Nerovny edition (detox)" below version info
 - Helps distinguish custom build from official Telegram
 
 #### Secure API Credentials
 
-**Quick Reference**:
-- **Files**: `TMessagesProj/build.gradle`, `BuildVars.java`
-- **Config**: `local.properties` (gitignored)
-
 - API credentials loaded from `local.properties` (gitignored)
 - No hardcoded credentials in source code
 - Easy to configure per developer without committing secrets
+- Files: `TMessagesProj/build.gradle`, `BuildVars.java`; Config: `local.properties`
 
 #### App Name and Icon Configuration
-
-**Quick Reference**:
-- **Files**: `AndroidManifest.xml`, `values-*/strings.xml`
 
 - App name: "Telegram (detox)" configured in all language files
 - Icon and label attributes added to `<application>`, `DefaultIcon` activity-alias, and `LaunchActivity`
@@ -569,10 +403,6 @@ User profiles can display a linked "personal channel" as a native UI element. Th
 - Localized app names prevent fallback to default "Telegram" in non-English languages
 
 #### R8 Minification Disabled
-
-**Quick Reference**:
-- **Files**: All `build.gradle` files in app modules
-- **Config**: `minifyEnabled false`
 
 - `minifyEnabled false` for all build types (debug, release, standalone, etc.)
 - Dramatically reduces build time (~2-3 minutes instead of ~8 minutes)
@@ -914,28 +744,6 @@ Note: R8 minification is disabled for all build types, resulting in larger APKs 
 
 ## Technical Details
 
-### Architecture
-
-The modifications work at multiple levels:
-
-1. **Filter Layer** (`filter()` methods): Blocks items at the adapter level before they're displayed
-2. **Search Prevention** (`openSearchWithText()`): Prevents search UI from opening in blocked chats
-3. **Discovery Layer** (channel adapters): Filters out unsubscribed public channels at source
-
-### Chat Identification
-
-Chats are identified by name using:
-- `UserObject.getUserName(user)` for private chats (users)
-- `chat.title` for groups and channels
-- `DialogObject` utilities for dialog type detection
-
-### Blocklist Loading
-
-- Blocklist is loaded from `assets/blocked_chats.txt` on first use
-- Lazy loading via `loadBlockedChats()` method
-- Cached in memory after first load
-- File format: one chat name per line, `#` for comments
-
 ### Search Flow
 
 ```
@@ -948,57 +756,7 @@ User Input → DialogsSearchAdapter → filter() → (check blocklist) → Displ
                           ChatActivity → openSearchWithText() → (check blocklist) → Allow/Block
 ```
 
----
-
-## Customization Guide
-
-### Adding Blocked Chats
-
-**First time setup:**
-```bash
-# Copy template files to create your personal blocklist
-cp blocked_chats.txt.example blocked_chats.txt
-cp TMessagesProj/src/main/assets/blocked_chats.txt.example TMessagesProj/src/main/assets/blocked_chats.txt
-```
-
-**To add/modify blocked chats:**
-
-1. **Edit the blocklist file** in the project root:
-   ```bash
-   nano blocked_chats.txt  # or use any text editor
-   ```
-
-2. **Add chat names** (one per line):
-   ```
-   Distracting Friend
-   Time Waster Group
-   News Channel Name
-   ```
-
-3. **Copy to assets**:
-   ```bash
-   cp blocked_chats.txt TMessagesProj/src/main/assets/blocked_chats.txt
-   ```
-
-4. **Rebuild the app**
-
-**Notes**:
-- Matching is case-insensitive
-- Substring matching (e.g., "John" matches "John Doe")
-- Lines starting with `#` are comments
-- Empty lines are ignored
-- No runtime configuration - changes require rebuild (by design)
-- Keep root and assets files in sync before building
-- Personal `blocked_chats.txt` files are gitignored for privacy
-- Use `blocked_chats.txt.example` as template
-
-### Reverting Changes
-
-All custom modifications are marked with `// CUSTOM:` comments. Search for this string to find all modifications:
-
-```bash
-grep -r "// CUSTOM:" TMessagesProj/src/
-```
+Chats are identified by name using `UserObject.getUserName(user)` for private chats, `chat.title` for groups/channels. The blocklist is loaded lazily from `assets/blocked_chats.txt` on first use and cached in memory.
 
 ---
 
@@ -1065,8 +823,6 @@ grep APP_VERSION gradle.properties
 
 #### Updating to New Stable Release
 
-**Option 1: Merge (Recommended for first-time updates)**
-
 ```bash
 # From your custom branch
 git checkout nerovny/detox
@@ -1082,24 +838,6 @@ git commit -m "Merge upstream release-12.1.0"
 git push private nerovny/detox
 ```
 
-**Option 2: Rebase (Clean history, more complex)**
-
-```bash
-# CAUTION: Rebase rewrites history
-git checkout nerovny/detox
-git fetch upstream --tags
-
-# Rebase your custom commits onto new release
-git rebase release-12.1.0
-
-# Resolve conflicts for each commit
-# After resolving:
-git rebase --continue
-
-# Force push (since history was rewritten)
-git push private nerovny/detox --force-with-lease
-```
-
 #### Handling Conflicts
 
 Your custom modifications will likely conflict with upstream changes. Common conflict areas:
@@ -1113,7 +851,7 @@ Your custom modifications will likely conflict with upstream changes. Common con
 **Conflict resolution strategy:**
 
 ```bash
-# During merge/rebase, check which files have conflicts
+# During merge, check which files have conflicts
 git status
 
 # For each conflicting file, look for your custom modifications
@@ -1127,9 +865,8 @@ grep -n "// CUSTOM:" path/to/conflicting/file.java
 # After fixing a file:
 git add path/to/file.java
 
-# Continue merge/rebase
-git merge --continue   # if merging
-git rebase --continue  # if rebasing
+# Continue merge
+git merge --continue
 ```
 
 **Quick conflict finder:**
@@ -1140,7 +877,7 @@ grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java" -n
 
 #### Testing After Update
 
-After merging/rebasing from upstream:
+After merging from upstream:
 
 1. **Clean build**:
    ```bash
@@ -1165,30 +902,13 @@ After merging/rebasing from upstream:
 - **Skip**: Patch releases (x.y.Z) unless critical security fixes
 - **Avoid**: Updating during major versions (X.0.0) without extensive testing
 
-#### Tracking Changes
-
-Keep a log of your merge commits to track which upstream versions you've integrated:
-
-```bash
-# View your merge history
-git log --oneline --merges --graph
-
-# View what changed in an upstream release
-git log release-12.0.0..release-12.1.0 --oneline
-```
-
-#### Emergency: Abort Merge/Rebase
+#### Emergency: Abort Merge
 
 If conflicts become too complex:
 
 ```bash
-# Abort merge
 git merge --abort
-
-# Abort rebase
-git rebase --abort
-
-# You'll return to the state before the merge/rebase started
+# You'll return to the state before the merge started
 ```
 
 ### Files with Custom Modifications
