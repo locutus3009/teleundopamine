@@ -284,6 +284,8 @@ public class NotificationCenter {
     public static final int musicListLoaded = totalEvents++;
     public static final int musicIdsLoaded = totalEvents++;
     public static final int profileMusicUpdated = totalEvents++;
+    public static final int updatedChatRanks = totalEvents++;
+    public static final int joinedGroup = totalEvents++;
 
     //global
     public static final int pushMessagesUpdated = totalEvents++;
@@ -373,6 +375,8 @@ public class NotificationCenter {
     public static final int botForumDraftUpdate = totalEvents++;
     public static final int botForumDraftDelete = totalEvents++;
     public static final int tlSchemeParseException = totalEvents++;
+    public static final int callTabsVisibleToggled = totalEvents++;
+    public static final int contactsPermissionBadgeCheck = totalEvents++;
 
     public static boolean alreadyLogged;
 
@@ -693,6 +697,14 @@ public class NotificationCenter {
         }
     }
 
+    public void updateObserver(boolean add, NotificationCenterDelegate observer, int id) {
+        if (add) {
+            addObserver(observer, id);
+        } else {
+            removeObserver(observer, id);
+        }
+    }
+
     public void addObserver(NotificationCenterDelegate observer, int id) {
         if (BuildVars.DEBUG_VERSION) {
             if (Thread.currentThread() != ApplicationLoader.applicationHandler.getLooper().getThread()) {
@@ -873,6 +885,21 @@ public class NotificationCenter {
                 }
                 removeObserver(observer[0], id);
                 observer[0] = null;
+            }
+        };
+        addObserver(observer[0], id);
+    }
+
+    public void listenOnce(int id, Utilities.Callback3<Integer, Object[], Runnable> callback) {
+        final NotificationCenterDelegate[] observer = new NotificationCenterDelegate[1];
+        observer[0] = (nid, account, args) -> {
+            if (nid == id && observer[0] != null) {
+                if (callback != null) {
+                    callback.run(account, args, () -> {
+                        removeObserver(observer[0], id);
+                        observer[0] = null;
+                    });
+                }
             }
         };
         addObserver(observer[0], id);

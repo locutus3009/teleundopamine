@@ -99,6 +99,7 @@ import org.telegram.ui.Components.TranscribeButton;
 import org.telegram.ui.DialogsActivity;
 import org.telegram.ui.EditWidgetActivity;
 import org.telegram.ui.LaunchActivity;
+import org.telegram.ui.MainTabsActivity;
 import org.telegram.ui.PremiumPreviewFragment;
 import org.telegram.ui.ProfileActivity;
 import org.telegram.ui.SecretMediaViewer;
@@ -578,7 +579,6 @@ public class MessagesController extends BaseController implements NotificationCe
     public int channelAutotranslationLevelMin;
     public Set<String> webAppAllowedProtocols;
     public Set<String> ignoreRestrictionReasons;
-
     public int channelsLimitDefault;
     public int channelsLimitPremium;
     public int savedGifsLimitDefault;
@@ -678,6 +678,39 @@ public class MessagesController extends BaseController implements NotificationCe
     public String verifyAgeBotUsername;
     public String verifyAgeCountry;
     public int verifyAgeMin;
+    public int chatlistInvitesLimitDefault;
+    public int chatlistInvitesLimitPremium;
+    public int chatlistJoinedLimitDefault;
+    public int chatlistJoinedLimitPremium;
+    public String storiesPosting;
+    public String storiesEntities;
+    public int stargiftsMessageLengthMax;
+    public int stargiftsConvertPeriodMax;
+    public boolean videoIgnoreAltDocuments;
+    public boolean disableBotFullscreenBlur;
+    public String tonBlockchainExplorerUrl;
+    public long starsPaidMessageAmountMax;
+    public int starsPaidMessageCommissionPermille;
+    public int stargiftsPinnedToTopLimit;
+    public boolean starsPaidMessagesAvailable;
+    public long freezeSinceDate;
+    public long freezeUntilDate;
+    public String freezeAppealUrl;
+    public int conferenceCallSizeLimit;
+    public boolean callRequestsDisabled;
+    public int pollAnswersMax;
+    public int todoItemsMax;
+    public int todoTitleLengthMax;
+    public int todoItemLengthMax;
+    public String translationsManualEnabled; // "enabled", "alternative", "system", "disabled"
+    public String translationsAutoEnabled; // "enabled", "alternative", "system", "disabled"
+    public HashSet<Long> whitelistedBots;
+    public int[] starsGroupcallMessageLimits;
+    public int starsGroupcallMessageAmountMax;
+    public long tonStakeddiceStakeAmountMin;
+    public long tonStakeddiceStakeAmountMax;
+    public long[] tonStakediceStakeSuggestedAmounts;
+    public int[][] stargiftsCraftAttributesPermilles;
 
     private final SharedPreferences notificationsPreferences;
     private final SharedPreferences mainPreferences;
@@ -711,36 +744,6 @@ public class MessagesController extends BaseController implements NotificationCe
     public boolean uploadMarkupVideo;
     public boolean giftAttachMenuIcon;
     public boolean giftTextFieldIcon;
-
-    public int chatlistInvitesLimitDefault;
-    public int chatlistInvitesLimitPremium;
-    public int chatlistJoinedLimitDefault;
-    public int chatlistJoinedLimitPremium;
-    public String storiesPosting;
-    public String storiesEntities;
-    public int stargiftsMessageLengthMax;
-    public int stargiftsConvertPeriodMax;
-    public boolean videoIgnoreAltDocuments;
-    public boolean disableBotFullscreenBlur;
-    public String tonBlockchainExplorerUrl;
-    public long starsPaidMessageAmountMax;
-    public int starsPaidMessageCommissionPermille;
-    public int stargiftsPinnedToTopLimit;
-    public boolean starsPaidMessagesAvailable;
-    public long freezeSinceDate;
-    public long freezeUntilDate;
-    public String freezeAppealUrl;
-    public int conferenceCallSizeLimit;
-    public boolean callRequestsDisabled;
-    public int pollAnswersMax;
-    public int todoItemsMax;
-    public int todoTitleLengthMax;
-    public int todoItemLengthMax;
-    public String translationsManualEnabled; // "enabled", "alternative", "system", "disabled"
-    public String translationsAutoEnabled; // "enabled", "alternative", "system", "disabled"
-    public HashSet<Long> whitelistedBots;
-    public int[] starsGroupcallMessageLimits;
-    public int starsGroupcallMessageAmountMax;
 
     public boolean isTranslationsManualEnabled() {
         return !"disabled".equals(translationsManualEnabled);
@@ -1723,6 +1726,14 @@ public class MessagesController extends BaseController implements NotificationCe
         starrefMaxCommissionPermille = mainPreferences.getInt("starrefMaxCommissionPermille", 400);
         botVerificationDescriptionLengthLimit = mainPreferences.getInt("botVerificationDescriptionLengthLimit", 70);
         paidReactionsPrivacyTime = mainPreferences.getLong("paidReactionsAnonymousTime", 0);
+        tonStakeddiceStakeAmountMin = mainPreferences.getLong("tonStakeddiceStakeAmountMin", 100000000L);
+        tonStakeddiceStakeAmountMax = mainPreferences.getLong("tonStakeddiceStakeAmountMax", 50000000000L);
+        tonStakediceStakeSuggestedAmounts = Arrays.stream(mainPreferences.getString("tonStakediceStakeSuggestedAmounts", "100000000,1000000000,2000000000,5000000000,10000000000,20000000000").split(",")).mapToLong(Long::parseLong).toArray();
+        stargiftsCraftAttributesPermilles = Arrays.stream(mainPreferences.getString("stargiftsCraftAttributesPermilles", "90,,80,200,,70,190,460,,60,180,450,1000").split(",,"))
+                .map(r -> Arrays.stream(r.split(","))
+                    .mapToInt(Integer::parseInt)
+                    .toArray())
+                .toArray(int[][]::new);
         config.load(mainPreferences);
 
         final boolean paidReactionsActual = (System.currentTimeMillis() - paidReactionsPrivacyTime) < 1000 * 60 * 60 * 2;
@@ -4883,6 +4894,69 @@ public class MessagesController extends BaseController implements NotificationCe
                     }
                     break;
                 }
+                case "ton_stakedice_stake_amount_min": {
+                    if (value.value instanceof TLRPC.TL_jsonNumber) {
+                        final TLRPC.TL_jsonNumber num = (TLRPC.TL_jsonNumber) value.value;
+                        if (tonStakeddiceStakeAmountMin != (long) num.value) {
+                            editor.putLong("tonStakeddiceStakeAmountMin", tonStakeddiceStakeAmountMin = (long) num.value);
+                            changed = true;
+                        }
+                    }
+                    break;
+                }
+                case "ton_stakedice_stake_amount_max": {
+                    if (value.value instanceof TLRPC.TL_jsonNumber) {
+                        final TLRPC.TL_jsonNumber num = (TLRPC.TL_jsonNumber) value.value;
+                        if (tonStakeddiceStakeAmountMax != (long) num.value) {
+                            editor.putLong("tonStakeddiceStakeAmountMax", tonStakeddiceStakeAmountMax = (long) num.value);
+                            changed = true;
+                        }
+                    }
+                    break;
+                }
+                case "ton_stakedice_stake_suggested_amounts": {
+                    if (value.value instanceof TLRPC.TL_jsonArray) {
+                        final TLRPC.TL_jsonArray arr = (TLRPC.TL_jsonArray) value.value;
+                        final long[] values = new long[arr.value.size()];
+                        for (int i = 0; i < arr.value.size(); ++i) {
+                            if (arr.value.get(i) instanceof TLRPC.TL_jsonNumber) {
+                                values[i] = (long) ((TLRPC.TL_jsonNumber) arr.value.get(i)).value;
+                            }
+                        }
+                        if (!Arrays.equals(values, tonStakediceStakeSuggestedAmounts)) {
+                            editor.putString("tonStakeddiceStakeSuggestedAmounts", Arrays.stream(tonStakediceStakeSuggestedAmounts = values).mapToObj(String::valueOf).collect(Collectors.joining(",")));
+                            changed = true;
+                        }
+                    }
+                    break;
+                }
+                case "stargifts_craft_attribute_permilles": {
+                    if (value.value instanceof TLRPC.TL_jsonArray) {
+                        final TLRPC.TL_jsonArray arr = (TLRPC.TL_jsonArray) value.value;
+                        final int[][] values = new int[arr.value.size()][];
+                        for (int i = 0; i < arr.value.size(); ++i) {
+                            if (arr.value.get(i) instanceof TLRPC.TL_jsonArray) {
+                                final TLRPC.TL_jsonArray darr = (TLRPC.TL_jsonArray) arr.value.get(i);
+                                values[i] = new int[darr.value.size()];
+                                for (int j = 0; j < darr.value.size(); ++j) {
+                                    if (darr.value.get(j) instanceof TLRPC.TL_jsonNumber)
+                                        values[i][j] = (int) ((TLRPC.TL_jsonNumber) darr.value.get(j)).value;
+                                }
+                            }
+                        }
+                        if (!Arrays.deepEquals(values, stargiftsCraftAttributesPermilles)) {
+                            editor.putString("stargiftsCraftAttributesPermilles",
+                                Arrays.stream(stargiftsCraftAttributesPermilles = values)
+                                    .map(row -> Arrays.stream(row)
+                                        .mapToObj(String::valueOf)
+                                        .collect(Collectors.joining(",")))
+                                    .collect(Collectors.joining(",,"))
+                            );
+                            changed = true;
+                        }
+                    }
+                    break;
+                }
             }
         }
 
@@ -5529,7 +5603,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 getNotificationCenter().postNotificationName(NotificationCenter.newSuggestionsAvailable);
             } else if (pendingSuggestions.remove(suggestion) || !dismissedSuggestions.contains(suggestion)) {
                 dismissedSuggestions.add(suggestion);
-                SharedPreferences.Editor editor = mainPreferences.edit();
+                final SharedPreferences.Editor editor = mainPreferences.edit();
                 editor.putStringSet("pendingSuggestions", pendingSuggestions);
                 editor.putStringSet("dismissedSuggestions", dismissedSuggestions);
                 editor.commit();
@@ -6504,6 +6578,22 @@ public class MessagesController extends BaseController implements NotificationCe
         return isChatNoForwards(getChat(chatId));
     }
 
+    public boolean isPeerNoForwards(long dialogId) {
+        return dialogId > 0 ? isUserNoForwards(dialogId) : isChatNoForwards(-dialogId);
+    }
+
+    public boolean isUserNoForwards(long userId) {
+        return isUserNoForwards(getUserFull(userId));
+    }
+
+    public boolean isUserNoForwards(TLRPC.UserFull userFull) {
+        if (userFull == null) {
+            return false;
+        }
+
+        return userFull.noforwards_peer_enabled || userFull.noforwards_my_enabled;
+    }
+
     public TLRPC.User getUser(Long id) {
         if (id == 0) {
             return UserConfig.getInstance(currentAccount).getCurrentUser();
@@ -7231,18 +7321,125 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public String getAdminRank(long chatId, long uid) {
-        if (chatId == uid) {
-            return "";
+        if (chatId == uid) return "";
+        final LongSparseArray<TLRPC.ChannelParticipant> array = channelAdmins.get(chatId);
+        if (array != null) {
+            final TLRPC.ChannelParticipant participant = array.get(uid);
+            if (participant != null) {
+                if (participant.rank != null)
+                    return participant.rank;
+                if (participant instanceof TLRPC.TL_channelParticipantCreator)
+                    return LocaleController.getString(R.string.ChatTagOwner);
+                if (participant instanceof TLRPC.TL_channelParticipantAdmin)
+                    return LocaleController.getString(R.string.ChatTagAdmin);
+            }
         }
-        LongSparseArray<TLRPC.ChannelParticipant> array = channelAdmins.get(chatId);
+        final TLRPC.ChatFull chatFull = getChatFull(chatId);
+        if (chatFull != null && chatFull.participants != null) {
+            for (int i = 0; i < chatFull.participants.participants.size(); ++i) {
+                final TLRPC.ChatParticipant p = chatFull.participants.participants.get(i);
+                if (p.user_id == uid) {
+                    if (p.rank != null) return p.rank;
+                    if (p instanceof TLRPC.TL_chatChannelParticipant) {
+                        final TLRPC.TL_chatChannelParticipant pp = (TLRPC.TL_chatChannelParticipant) p;
+                        if (pp.channelParticipant != null) {
+                            return pp.channelParticipant.rank;
+                        }
+                    }
+                    if (p instanceof TLRPC.TL_chatParticipantCreator)
+                        return LocaleController.getString(R.string.ChatTagOwner);
+                    if (p instanceof TLRPC.TL_chatParticipantAdmin)
+                        return LocaleController.getString(R.string.ChatTagAdmin);
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
+    public void updateRank(long chatId, long uid, String rank) {
+        if (TextUtils.isEmpty(rank)) rank = null;
+        final TLRPC.Chat chat = getChat(chatId);
+        final LongSparseArray<TLRPC.ChannelParticipant> array = channelAdmins.get(chatId);
+        if (array != null) {
+            final TLRPC.ChannelParticipant participant = array.get(uid);
+            if (participant != null) {
+                participant.rank = rank;
+            }
+        }
+        final TLRPC.ChatFull chatFull = getChatFull(chatId);
+        if (chatFull != null && chatFull.participants != null) {
+            for (int i = 0; i < chatFull.participants.participants.size(); ++i) {
+                final TLRPC.ChatParticipant p = chatFull.participants.participants.get(i);
+                p.setRank(uid, rank); if (p.user_id == uid) {
+                    if (p instanceof TLRPC.TL_chatChannelParticipant) {
+                        final TLRPC.TL_chatChannelParticipant pp = (TLRPC.TL_chatChannelParticipant) p;
+                        if (pp.channelParticipant != null) {
+                            pp.channelParticipant.rank = rank;
+                        }
+                    } else {
+                        p.rank = rank;
+                    }
+                }
+            }
+        }
+        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, 0);
+        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updatedChatRanks, chatId, uid, rank);
+        MessagesStorage.getInstance(currentAccount).updateRanksInLastMessages(-chatId, uid, rank);
+    }
+
+    public TLObject getParticipant(long chatId, long uid) {
+        final LongSparseArray<TLRPC.ChannelParticipant> array = channelAdmins.get(chatId);
         if (array == null) {
-            return null;
+            final TLRPC.ChatFull chatFull = getChatFull(chatId);
+            if (chatFull != null && chatFull.participants != null) {
+                for (int i = 0; i < chatFull.participants.participants.size(); ++i) {
+                    final TLRPC.ChatParticipant p = chatFull.participants.participants.get(i);
+                    if (p.user_id == uid) {
+                        return p;
+                    }
+                }
+            }
         }
-        TLRPC.ChannelParticipant participant = array.get(uid);
-        if (participant == null) {
-            return null;
+        return array.get(uid);
+    }
+
+    public boolean isAdmin(long chatId, long uid) {
+        if (chatId == uid) return true;
+        final LongSparseArray<TLRPC.ChannelParticipant> array = channelAdmins.get(chatId);
+        if (array == null) {
+            final TLRPC.ChatFull chatFull = getChatFull(chatId);
+            if (chatFull != null && chatFull.participants != null) {
+                for (int i = 0; i < chatFull.participants.participants.size(); ++i) {
+                    final TLRPC.ChatParticipant p = chatFull.participants.participants.get(i);
+                    if (p.user_id == uid) {
+                        return p instanceof TLRPC.TL_chatParticipantAdmin || p instanceof TLRPC.TL_chatParticipantCreator;
+                    }
+                }
+            }
         }
-        return participant.rank != null ? participant.rank : "";
+        final TLRPC.ChannelParticipant participant = array.get(uid);
+        return participant instanceof TLRPC.TL_channelParticipantAdmin || participant instanceof TLRPC.TL_channelParticipantCreator;
+    }
+
+    public boolean isOwner(long chatId, long uid) {
+        if (chatId == uid) return true;
+        final TLRPC.Chat chat = getChat(chatId);
+        if (getUserConfig().getClientUserId() == uid && chat != null && chat.creator) return true;
+        final LongSparseArray<TLRPC.ChannelParticipant> array = channelAdmins.get(chatId);
+        if (array == null) {
+            final TLRPC.ChatFull chatFull = getChatFull(chatId);
+            if (chatFull != null && chatFull.participants != null) {
+                for (int i = 0; i < chatFull.participants.participants.size(); ++i) {
+                    final TLRPC.ChatParticipant p = chatFull.participants.participants.get(i);
+                    if (p.user_id == uid) {
+                        return p instanceof TLRPC.TL_chatParticipantCreator;
+                    }
+                }
+            }
+        }
+        final TLRPC.ChannelParticipant participant = array.get(uid);
+        return participant instanceof TLRPC.TL_channelParticipantCreator;
     }
 
     public boolean isChannelAdminsLoaded(long chatId) {
@@ -8465,6 +8662,7 @@ public class MessagesController extends BaseController implements NotificationCe
             req.channel = getInputChannel(chat);
             req.user_id = getInputUser(user);
             req.admin_rights = rights;
+            req.flags |= 1;
             req.rank = rank;
             RequestDelegate requestDelegate = (response, error) -> {
                 if (error == null) {
@@ -14354,14 +14552,49 @@ public class MessagesController extends BaseController implements NotificationCe
         }, ConnectionsManager.RequestFlagInvokeAfter);
     }
 
-    public void toggleChatNoForwards(long chatId, boolean enabled) {
+    public void toggleChatNoForwards(long dialogId, boolean enabled) {
+        toggleChatNoForwards(dialogId, 0, enabled, null);
+    }
+
+
+    public static final int TOGGLE_NO_FORWARDS_RESULT_ERROR = 0;
+    public static final int TOGGLE_NO_FORWARDS_RESULT_OK = 1;
+    public static final int TOGGLE_NO_FORWARDS_RESULT_PENDING = 2;
+
+    public void toggleChatNoForwards(long dialogId, int msgId, boolean enabled, Utilities.Callback2<Integer, TLRPC.TL_error> callback) {
         TLRPC.TL_messages_toggleNoForwards req = new TLRPC.TL_messages_toggleNoForwards();
-        req.peer = getInputPeer(-chatId);
+        req.peer = getInputPeer(dialogId);
         req.enabled = enabled;
-        getConnectionsManager().sendRequest(req, (response, error) -> {
+        if (msgId > 0) {
+            req.request_msg_id = msgId;
+            req.flags |= TLObject.FLAG_0;
+        }
+        getConnectionsManager().sendRequestTyped(req, null, (response, error) -> {
             if (response != null) {
-                processUpdates((TLRPC.Updates) response, false);
-                AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, UPDATE_MASK_CHAT));
+                int status = TOGGLE_NO_FORWARDS_RESULT_ERROR;
+                for (TLRPC.Update update : response.updates) {
+                    if (update instanceof TLRPC.TL_updateNewMessage) {
+                        TLRPC.Message message = ((TLRPC.TL_updateNewMessage) update).message;
+                        if (message.action instanceof TLRPC.TL_messageActionNoForwardsRequest) {
+                            status = TOGGLE_NO_FORWARDS_RESULT_PENDING;
+                            break;
+                        } else if (message.action instanceof TLRPC.TL_messageActionNoForwardsToggle) {
+                            status = TOGGLE_NO_FORWARDS_RESULT_OK;
+                            break;
+                        }
+                    }
+                }
+                processUpdates(response, false);
+
+                final int finalStatus = status;
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (callback != null) {
+                        callback.run(finalStatus, null);
+                    }
+                    getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, UPDATE_MASK_CHAT);
+                });
+            } else if (callback != null) {
+                AndroidUtilities.runOnUIThread(() -> callback.run(TOGGLE_NO_FORWARDS_RESULT_ERROR, error));
             }
         }, ConnectionsManager.RequestFlagInvokeAfter);
     }
@@ -14630,8 +14863,8 @@ public class MessagesController extends BaseController implements NotificationCe
 
         TLObject request;
 
-        boolean isChannel = ChatObject.isChannel(chatId, currentAccount);
-        boolean isMegagroup = isChannel && getChat(chatId).megagroup;
+        final TLRPC.Chat chat = getChat(chatId); final boolean isChannel = ChatObject.isChannel(chat);
+        final boolean isMegagroup = isChannel && chat.megagroup;
         TLRPC.InputUser inputUser = getInputUser(user);
         if (botHash == null || isChannel && !isMegagroup) {
             if (isChannel) {
@@ -14779,6 +15012,11 @@ public class MessagesController extends BaseController implements NotificationCe
             if (processInvitedUsers != null) {
                 AndroidUtilities.runOnUIThread(() -> processInvitedUsers.run(null));
             }
+            if (UserObject.isUserSelf(user) && !ChatObject.isChannelAndNotMegaGroup(chat) && hasJoinMessage) {
+                AndroidUtilities.runOnUIThread(() -> {
+                    getNotificationCenter().postNotificationName(NotificationCenter.joinedGroup, chatId);
+                });
+            }
         });
     }
 
@@ -14814,7 +15052,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     request = req;
                 }
             } else {
-                TLRPC.TL_channels_editBanned req = new TLRPC.TL_channels_editBanned();
+                final TLRPC.TL_channels_editBanned req = new TLRPC.TL_channels_editBanned();
                 req.channel = getInputChannel(ownerChat);
                 req.participant = peer;
                 req.banned_rights = new TLRPC.TL_chatBannedRights();
@@ -14830,6 +15068,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 req.banned_rights.send_polls = true;
                 req.banned_rights.invite_users = true;
                 req.banned_rights.change_info = true;
+                req.banned_rights.edit_rank = true;
                 request = req;
             }
         } else {
@@ -14905,6 +15144,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 req.banned_rights.send_polls = true;
                 req.banned_rights.invite_users = true;
                 req.banned_rights.change_info = true;
+                req.banned_rights.edit_rank = true;
                 request = req;
             }
         } else {
@@ -17330,6 +17570,7 @@ public class MessagesController extends BaseController implements NotificationCe
         LongSparseArray<TLRPC.WebPage> webPages = null;
         ArrayList<MessageObject> pushMessages = null;
         ArrayList<TLRPC.Message> messagesArr = null;
+        ArrayList<TLRPC.Message> messageActionNoForwardsToggles = null;
         ArrayList<TLRPC.TL_sendMessageEmojiInteraction> emojiInteractions = null;
         ArrayList<TLRPC.Message> scheduledMessagesArr = null;
         LongSparseArray<ArrayList<MessageObject>> editingMessages = null;
@@ -17595,6 +17836,15 @@ public class MessagesController extends BaseController implements NotificationCe
                         }
                         pushMessages.add(obj);
                     }
+                    if (message.action instanceof TLRPC.TL_messageActionNoForwardsToggle) {
+                        final TLRPC.TL_messageActionNoForwardsToggle action = (TLRPC.TL_messageActionNoForwardsToggle) message.action;
+                        if (action.new_value != action.prev_value) {
+                            if (messageActionNoForwardsToggles == null) {
+                                messageActionNoForwardsToggles = new ArrayList<>();
+                            }
+                            messageActionNoForwardsToggles.add(message);
+                        }
+                    }
                 }
             } else if (baseUpdate instanceof TLRPC.TL_updateGroupCallMessage) {
                 final TLRPC.TL_updateGroupCallMessage u = (TLRPC.TL_updateGroupCallMessage) baseUpdate;
@@ -17610,6 +17860,8 @@ public class MessagesController extends BaseController implements NotificationCe
             } else if (baseUpdate instanceof TLRPC.TL_updateGroupCallEncryptedMessage) {
                 GroupCallMessagesController.getInstance(currentAccount)
                     .processUpdate((TLRPC.TL_updateGroupCallEncryptedMessage) baseUpdate);
+            } else if (baseUpdate instanceof TLRPC.TL_updateEmojiGameInfo) {
+                stakeDiceInfo = ((TLRPC.TL_updateEmojiGameInfo) baseUpdate).info;
             } else if (baseUpdate instanceof TLRPC.TL_updateReadMessagesContents) {
                 TLRPC.TL_updateReadMessagesContents update = (TLRPC.TL_updateReadMessagesContents) baseUpdate;
                 markContentAsReadMessagesDate = update.date;
@@ -18619,6 +18871,7 @@ public class MessagesController extends BaseController implements NotificationCe
         ArrayList<TLRPC.TL_updateFolderPeers> folderUpdatesFinal = folderUpdates;
         LongSparseArray<ArrayList<Long>> groupSpeakingActionsFinal = groupSpeakingActions;
         LongSparseIntArray importingActionsFinal = importingActions;
+        ArrayList<TLRPC.Message> finalMessageActionNoForwardsToggles = messageActionNoForwardsToggles;
 
         AndroidUtilities.runOnUIThread(() -> {
             int updateMask = interfaceUpdateMaskFinal;
@@ -19495,6 +19748,9 @@ public class MessagesController extends BaseController implements NotificationCe
                         if (service != null && service.conference != null) {
                             service.conference.applyUpdate(null, (TLRPC.TL_updateGroupCallChainBlocks) baseUpdate, true, null);
                         }
+                    } else if (baseUpdate instanceof TLRPC.TL_updateChatParticipantRank) {
+                        final TLRPC.TL_updateChatParticipantRank update = (TLRPC.TL_updateChatParticipantRank) baseUpdate;
+                        updateRank(update.chat_id, update.user_id, update.rank);
                     } else if (ApplicationLoader.applicationLoaderInstance != null) {
                         ApplicationLoader.applicationLoaderInstance.processUpdate(currentAccount, baseUpdate);
                     }
@@ -19505,6 +19761,26 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
                 getMessagesStorage().updateUsers(dbUsersStatus, true, true, true);
                 getMessagesStorage().updateUsers(dbUsers, false, true, true);
+            }
+            if (finalMessageActionNoForwardsToggles != null) {
+                for (TLRPC.Message message : finalMessageActionNoForwardsToggles) {
+                    final long peerId = MessageObject.getPeerId(message.peer_id);
+                    final long fromId = MessageObject.getPeerId(message.from_id);
+                    TLRPC.UserFull userFull = getUserFull(peerId);
+                    if (userFull != null && message.action instanceof TLRPC.TL_messageActionNoForwardsToggle) {
+                        TLRPC.TL_messageActionNoForwardsToggle action = (TLRPC.TL_messageActionNoForwardsToggle) message.action;
+                        if (!action.new_value) {
+                            userFull.noforwards_peer_enabled = false;
+                            userFull.noforwards_my_enabled = false;
+                        } else if (fromId == peerId) {
+                            userFull.noforwards_peer_enabled = true;
+                        } else {
+                            userFull.noforwards_my_enabled = true;
+                        }
+                        getNotificationCenter().postNotificationName(NotificationCenter.userInfoDidLoad, peerId, userFull);
+                        getMessagesStorage().updateUserInfo(userFull, false);
+                    }
+                }
             }
             if (groupSpeakingActionsFinal != null) {
                 for (int a = 0, N = groupSpeakingActionsFinal.size(); a < N; a++) {
@@ -21245,7 +21521,8 @@ public class MessagesController extends BaseController implements NotificationCe
             }
         }
         boolean doNotCloseLast = false;
-        if (LaunchActivity.getLastFragment() instanceof DialogsActivity) {
+        BaseFragment lastFragment = LaunchActivity.getLastFragment();
+        if (lastFragment instanceof DialogsActivity || lastFragment instanceof MainTabsActivity) {
             doNotCloseLast = true;
         }
         if (reason != null) {
@@ -23283,7 +23560,7 @@ public class MessagesController extends BaseController implements NotificationCe
         messageObjects.add(msg);
         getSendMessagesHelper().sendMessage(messageObjects, msg.getDialogId(),
             !msg.isForwarded(), false, true, 0,
-            msg.messageOwner.suggested_post != null ? msg : null,
+                0, msg.messageOwner.suggested_post != null ? msg : null,
             -1, 0,
             DialogObject.getPeerDialogId(msg.messageOwner.saved_peer_id),
             MessageSuggestionParams.of(suggestedPost)
@@ -23564,5 +23841,29 @@ public class MessagesController extends BaseController implements NotificationCe
 
     public void markEmailSuggestionAsShown() {
         emailSuggestionWasShown = true;
+    }
+
+    private ArrayList<Utilities.Callback<Boolean>> loadingStakeDiceInfo;
+    public TLRPC.EmojiGameInfo stakeDiceInfo;
+    public void loadStakeDiceInfo(Utilities.Callback<Boolean> isAvailable) {
+        if (stakeDiceInfo != null) {
+            isAvailable.run(stakeDiceInfo instanceof TLRPC.TL_emojiGameDiceInfo);
+            return;
+        }
+        if (loadingStakeDiceInfo != null) {
+            loadingStakeDiceInfo.add(isAvailable);
+            return;
+        }
+        loadingStakeDiceInfo = new ArrayList<>();
+        loadingStakeDiceInfo.add(isAvailable);
+        getConnectionsManager().sendRequestTyped(new TLRPC.TL_messages_getEmojiGameInfo(), AndroidUtilities::runOnUIThread, (res, err) -> {
+            if (res != null) {
+                stakeDiceInfo = res;
+            }
+            for (Utilities.Callback<Boolean> callback : loadingStakeDiceInfo) {
+                callback.run(stakeDiceInfo instanceof TLRPC.TL_emojiGameDiceInfo);
+            }
+            loadingStakeDiceInfo = null;
+        });
     }
 }
