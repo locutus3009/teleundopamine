@@ -74,6 +74,16 @@ grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java"
 | Comment button | `ChatActivity.java` | `didPressCommentButton()` callback |
 | Profile channel links | `ProfileActivity.java` | `updateRowsIds()` - channelRow disabled |
 
+### Sensitive (18+) Content Lockdown
+| Feature | File | Key Functions/Locations |
+|---------|------|-------------------------|
+| Read API force-false | `MessagesController.java` | `showSensitiveContent()` returns `false` |
+| Write API defensive force-false | `MessagesController.java` | `setContentSettings(boolean)` first line |
+| Local hygiene strip | `MessagesController.java` | `getContentSettings(callback)` callback |
+| Toggle row hidden | `ThemeActivity.java` | `updateRowsIds()` row allocation commented out |
+| Per-message reveal blocked (chat) | `ChatActivity.java` | `didPressRevealSensitiveContent()` |
+| Per-message reveal blocked (shared media) | `SharedMediaLayout.java` | `isSensitive()` branch in cell-tap dispatcher |
+
 ### Link & Navigation Blocking
 | Feature | File | Key Functions/Locations |
 |---------|------|-------------------------|
@@ -374,7 +384,33 @@ User profiles can display a linked "personal channel" as a native UI element (cl
   - Original code preserved as comments for future reference
   - Click handlers become unreachable since `channelRow` remains `-1`
 
-### 10. Additional Features
+### 10. Sensitive (18+) Content Lockdown
+
+The "Show 18+ Content" toggle in Settings is hidden, and sensitive content is permanently invisible on this build. Tapping a redacted thumbnail produces a blocking bulletin instead of the upstream tap-to-reveal alert. Local enforcement only — the server-side flag is not actively synced.
+
+**Implementation**:
+
+`TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java`:
+- `showSensitiveContent()` — returns `false` unconditionally. Original code preserved as a `/* */` comment.
+- `setContentSettings(boolean)` — defensive force-false at the entry point. The user-facing path is hidden; this guards against any future caller. Note that the original method body remains live but runtime-unreachable: with the parameter forced to `false`, the `if (showSensitiveContent)` branch never executes and the `else` branch (which removes `"sensitive"` from `ignoreRestrictionReasons`) runs on every call.
+- `getContentSettings(callback)` — when server state arrives, always strips `"sensitive"` from `ignoreRestrictionReasons` regardless of the server's `sensitive_enabled` flag. No active server-side sync.
+
+`TMessagesProj/src/main/java/org/telegram/ui/ThemeActivity.java`:
+- `updateRowsIds()` — `sensitiveContentRow = rowCount++` is commented out. The row stays `-1`; the existing `>= 0` guards across the file (notification, click handler, rendering, highlight) all become natural no-ops.
+
+`TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java`:
+- `didPressRevealSensitiveContent(ChatMessageCell)` — replaced with `BulletinFactory.of(this).createErrorBulletin("Sensitive (18+) content is blocked on this build").show(); return;`. Original alert-flow body preserved as a `/* */` block.
+
+`TMessagesProj/src/main/java/org/telegram/ui/Components/SharedMediaLayout.java`:
+- The inner `if (messageObject != null && messageObject.isSensitive())` branch in the cell-tap dispatcher is replaced with the same bulletin (with a `BulletinFactory.global()` fallback when `profileActivity` is null). Original alert-flow body preserved as a `/* */` block.
+
+**What stays untouched**:
+- Upstream's "18+" badge rendering on redacted thumbnails (`SharedPhotoVideoCell2`). Still appears as a "something hidden here" indicator. Tap is now blocked.
+- Upstream's media-spoiler/blur effect on sensitive media. Existing rendering is fine; only the click handler changes.
+
+**Future-merge stability**: the unique string `MessageShowSensitiveContentMediaTitle` is the search anchor for the per-message reveal alert. If a future upstream release adds a third reveal site, the post-merge verification walk (Feature → File Mapping table) will surface it.
+
+### 11. Additional Features
 
 #### Auto-Update Disabled
 
@@ -465,6 +501,14 @@ Use this checklist after any modification. Each feature has specific verificatio
 | Test Case | Steps | Expected Result |
 |-----------|-------|-----------------|
 | No personal channel shown | 1. Open user profile (who has personal channel set) | "Personal Channel" row does not appear |
+
+### Sensitive (18+) Content Lockdown
+| Test Case | Steps | Expected Result |
+|-----------|-------|-----------------|
+| 18+ toggle hidden in Settings | 1. Open Settings 2. Scroll to where the "Show 18+ Content" toggle would appear (between "Direct share" and "Send by Enter") | The toggle does not appear |
+| 18+ media stays redacted | 1. Open a chat or shared-media gallery containing 18+ content | Media renders with the spoiler/blur overlay; "18+" badge is still visible (upstream behavior) |
+| Tap on redacted 18+ media (chat) | 1. Tap a redacted 18+ thumbnail in a chat | Bulletin: "Sensitive (18+) content is blocked on this build". Media stays redacted |
+| Tap on redacted 18+ media (shared media) | 1. Open a profile/shared-media gallery 2. Tap a redacted 18+ thumbnail | Same bulletin as above |
 
 ### UI Verification
 | Test Case | Steps | Expected Result |
@@ -907,6 +951,8 @@ After resolving conflicts and before reporting the merge complete:
 
 4. **Search for any `// MERGE-FLAG:` annotations** introduced during conflict resolution — these mark spots where a TLRPC type or interface may have changed shape and need verification during the build/compile pass.
 
+5. **Confirm the marker baseline.** The total `// CUSTOM:` marker count is currently **38 across 11 files** (`grep -rc "// CUSTOM:" TMessagesProj/src/ --include="*.java" | awk -F: '{s+=$2} END{print s}'`). A merge that drops the count below this baseline has lost a guard somewhere — investigate before reporting the merge complete.
+
 This verification is intentionally code-level only. The build/runtime test happens once after all in-flight feature work for the merge has landed.
 
 #### Recommended Update Schedule
@@ -940,14 +986,16 @@ grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java" | wc -l
 **Modified files:**
 - `BuildVars.java` - Blocklist system, API credentials, auto-update disable
 - `DialogsSearchAdapter.java` - Global search filtering, hashtag search filtering, blocked chat filtering
-- `ChatActivity.java` - In-chat search blocking with notification, mobile subscription blocking, comment blocking, forward header blocking, channel reply icon blocking, @mention blocking
+- `ChatActivity.java` - In-chat search blocking with notification, mobile subscription blocking, comment blocking, forward header blocking, channel reply icon blocking, @mention blocking, per-message sensitive-content reveal blocked
 - `DialogsChannelsAdapter.java` - Channel discovery filtering
 - `SearchAdapterHelper.java` - Global search channel filtering, bot filtering
 - `PostsSearchContainer.java` - Public posts tab filtering for non-subscribed channels
 - `HashtagsSearchAdapter.java` - Hashtag search filtering for non-subscribed channels
 - `ProfileActivity.java` - Custom edition branding, mobile subscription blocking, comment blocking, profile channel links blocking
 - `LaunchActivity.java` - URL link blocking for non-subscribed channels/bots, invite link blocking
-- `MessagesController.java` - Similar channels feature disabled, @mention navigation blocking for channels/bots, Story link blocking
+- `MessagesController.java` - Similar channels feature disabled, @mention navigation blocking for channels/bots, Story link blocking, sensitive-content read/write force-off, ignoreRestrictionReasons hygiene
+- `ThemeActivity.java` - "Show 18+ Content" toggle hidden in Settings
+- `Components/SharedMediaLayout.java` - Per-message sensitive-content reveal alert blocked
 - `build.gradle` files - Google Services disabled, API credentials from local.properties
 - `settings.gradle` - Optional build variants disabled (Huawei, HockeyApp, Standalone, Tests)
 
