@@ -193,6 +193,33 @@ public class HashtagSearchController {
             }
         }
 
+        // CUSTOM: Block external hashtag lookup - allow only SEARCH_MY_MESSAGES or
+        // searches scoped to a subscribed chat / contact / non-bot user.
+        // Silent block: mirror the upstream "username resolution failed" branch.
+        if (searchType != ChatActivity.SEARCH_MY_MESSAGES) {
+            boolean blocked = false;
+            if (chat == null) {
+                blocked = true; // no target = global public hashtag search (the loophole)
+            } else if (chat instanceof TLRPC.Chat && ChatObject.isNotInChat((TLRPC.Chat) chat)) {
+                blocked = true; // non-subscribed channel / group
+            } else if (chat instanceof TLRPC.User) {
+                TLRPC.User u = (TLRPC.User) chat;
+                if (u.bot && !u.contact) {
+                    blocked = true; // non-contact bot
+                }
+            }
+            if (blocked) {
+                search.loading = false;
+                search.endReached = true;
+                search.count = 0;
+                NotificationCenter.getInstance(currentAccount).postNotificationName(
+                    NotificationCenter.hashtagSearchUpdated,
+                    guid, search.count, search.endReached, search.getMask(), search.selectedIndex, 0
+                );
+                return;
+            }
+        }
+
         int limit = 21;
         TLObject request;
         if (searchType == ChatActivity.SEARCH_MY_MESSAGES) {

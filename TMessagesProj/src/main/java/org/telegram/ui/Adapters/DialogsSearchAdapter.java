@@ -1324,6 +1324,14 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
 
             final String finalHashtag = hashtag;
 
+            // CUSTOM: Block external hashtag lookup - skip the inline hashtag-preview API call.
+            // publicPosts stays empty -> the "Public posts" header cell at the rendering site
+            // (also in this file, around L1987) is naturally hidden via its !publicPosts.isEmpty()
+            // guard. (See HashtagSearchController.searchHashtag() for the broader enforcement.)
+            // The post-hoc non-subscribed-channel filter that lived inside the original block is
+            // intentionally dropped: the filter is no longer load-bearing because the API call
+            // doesn't go out at all.
+            /*
             if (finalHashtag != null) {
                 waitingResponseCount++;
                 AndroidUtilities.runOnUIThread(searchHashtagRunnable = () -> {
@@ -1360,7 +1368,6 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
                             for (int i = 0; i < msgs.messages.size(); ++i) {
                                 TLRPC.Message msg = msgs.messages.get(i);
 
-                                // CUSTOM: Filter out messages from non-subscribed channels
                                 long dialogId = MessageObject.getDialogId(msg);
                                 if (DialogObject.isChatDialog(dialogId)) {
                                     TLRPC.Chat chat = controller.getChat(-dialogId);
@@ -1379,6 +1386,7 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
                     }));
                 }, 300);
             }
+            */
         }
     }
 

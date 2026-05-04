@@ -1492,9 +1492,11 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
         public void updateItems() {
             items.clear();
             items.add(new Item(DIALOGS_TYPE));
-            if (expandedPublicPosts) {
-                items.add(new Item(PUBLIC_POSTS_TYPE));
-            }
+            // CUSTOM: Block external hashtag lookup - hide "Public posts" tab
+            // (See HashtagSearchController.searchHashtag() for the API-layer enforcement.)
+            // if (expandedPublicPosts) {
+            //     items.add(new Item(PUBLIC_POSTS_TYPE));
+            // }
             items.add(new Item(CHANNELS_TYPE));
             items.add(new Item(BOTS_TYPE));
             items.add(new Item(POSTS_TYPE));
