@@ -88,7 +88,8 @@ grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java"
 | Feature | File | Key Functions/Locations |
 |---------|------|-------------------------|
 | Controller-layer gate | `HashtagSearchController.java` | `searchHashtag()` allow-rule |
-| "Public posts" tab hidden | `Components/SearchViewPager.java` | `updateItems()` `Item(PUBLIC_POSTS_TYPE)` commented out |
+| "Public posts" tab hidden (global search) | `Components/SearchViewPager.java` | `updateItems()` `Item(PUBLIC_POSTS_TYPE)` commented out |
+| "Public Posts" tab hidden (chat hashtag search) | `ChatActivity.java` | hashtag search adapter `getItemCount()` returns 2 (was 3); `defaultSearchPage` clamped to 0 |
 | Inline preview API call blocked | `Adapters/DialogsSearchAdapter.java` | `if (finalHashtag != null) { ... TL_channels_searchPosts ... }` commented out |
 
 ### Link & Navigation Blocking
@@ -432,6 +433,10 @@ Hashtag search and discovery are restricted to subscribed sources only. After th
 `TMessagesProj/src/main/java/org/telegram/ui/Adapters/DialogsSearchAdapter.java`:
 - The inline hashtag-preview `TL_channels_searchPosts` request block (separate from `HashtagSearchController`) is commented out. `publicPosts` stays empty → the "Public posts" header cell at the rendering site (also in this file) is naturally hidden via its existing `!publicPosts.isEmpty()` guard. The post-hoc non-subscribed-channel filter that lived inside that block is dropped (no longer load-bearing).
 
+`TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java`:
+- The hashtag-search tab strip *inside chats* (a separate `ViewPagerFixed.Adapter` from `SearchViewPager`) had three tabs: "This Chat" / "My Messages" / "Public Posts". The adapter's `getItemCount()` now returns `2` (was `3`), dropping the "Public Posts" tab. The unreachable case branches for `SEARCH_PUBLIC_POSTS` in `createView()` and `getItemTitle()` stay in place (defensive).
+- `defaultSearchPage` is force-set to `0` (the "This Chat" tab). The original conditional that picked `2` for `channelHashtags` / `forcePublic` / public-channel cases is preserved as a `/* */` comment. Without this clamp, `scrollToTab(2, 2)` would target a non-existent tab and crash on hashtag entry.
+
 **What stays untouched (defense-in-depth)**:
 - The post-hoc filters in `HashtagsSearchAdapter.java` and `PostsSearchContainer.java`. They remain as a second line of defense against any future code path that bypasses the controller.
 
@@ -540,7 +545,8 @@ Use this checklist after any modification. Each feature has specific verificatio
 ### External Hashtag Lookup Blocked
 | Test Case | Steps | Expected Result |
 |-----------|-------|-----------------|
-| "Public posts" tab hidden | 1. Open the global search 2. Look at the tab list | The "Public posts" tab does not appear |
+| "Public posts" tab hidden (global search) | 1. Open the global search 2. Look at the tab list | The "Public posts" tab does not appear |
+| "Public Posts" tab hidden (chat hashtag search) | 1. Open any chat 2. Tap a `#hashtag` in a message (or open search and type a hashtag) | The hashtag tab strip shows only "This Chat" and "My Messages"; no "Public Posts" tab. App does not crash. |
 | Inline hashtag preview hidden | 1. In global search, type a hashtag like `#news` 2. Look at the "Chats" tab results | No "Public posts" header cell appears (no inline preview of public posts) |
 | Hashtag click in subscribed channel | 1. Inside a subscribed channel, tap a `#hashtag` link in a message | Search opens; results limited to messages within the same subscribed channel |
 | Hashtag click in non-subscribed channel preview | 1. Open a non-subscribed channel preview 2. Tap a `#hashtag` link in a visible message | Search opens; result list is empty (silent block) |
@@ -988,7 +994,7 @@ After resolving conflicts and before reporting the merge complete:
 
 4. **Search for any `// MERGE-FLAG:` annotations** introduced during conflict resolution — these mark spots where a TLRPC type or interface may have changed shape and need verification during the build/compile pass.
 
-5. **Confirm the marker baseline.** The total `// CUSTOM:` marker count is currently **40 across 14 files** (`grep -rc "// CUSTOM:" TMessagesProj/src/ --include="*.java" | awk -F: '{s+=$2} END{print s}'`). A merge that drops the count below this baseline has lost a guard somewhere — investigate before reporting the merge complete.
+5. **Confirm the marker baseline.** The total `// CUSTOM:` marker count is currently **42 across 14 files** (`grep -rc "// CUSTOM:" TMessagesProj/src/ --include="*.java" | awk -F: '{s+=$2} END{print s}'`). A merge that drops the count below this baseline has lost a guard somewhere — investigate before reporting the merge complete.
 
 This verification is intentionally code-level only. The build/runtime test happens once after all in-flight feature work for the merge has landed.
 
