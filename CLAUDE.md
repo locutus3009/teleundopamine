@@ -84,6 +84,13 @@ grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java"
 | Per-message reveal blocked (chat) | `ChatActivity.java` | `didPressRevealSensitiveContent()` |
 | Per-message reveal blocked (shared media) | `SharedMediaLayout.java` | `isSensitive()` branch in cell-tap dispatcher |
 
+### External Hashtag Lookup Blocked
+| Feature | File | Key Functions/Locations |
+|---------|------|-------------------------|
+| Controller-layer gate | `HashtagSearchController.java` | `searchHashtag()` allow-rule |
+| "Public posts" tab hidden | `Components/SearchViewPager.java` | `updateItems()` `Item(PUBLIC_POSTS_TYPE)` commented out |
+| Inline preview API call blocked | `Adapters/DialogsSearchAdapter.java` | `if (finalHashtag != null) { ... TL_channels_searchPosts ... }` commented out |
+
 ### Link & Navigation Blocking
 | Feature | File | Key Functions/Locations |
 |---------|------|-------------------------|
@@ -410,7 +417,27 @@ The "Show 18+ Content" toggle in Settings is hidden, and sensitive content is pe
 
 **Future-merge stability**: the unique string `MessageShowSensitiveContentMediaTitle` is the search anchor for the per-message reveal alert. If a future upstream release adds a third reveal site, the post-merge verification walk (Feature → File Mapping table) will surface it.
 
-### 11. Additional Features
+### 11. External Hashtag Lookup Blocked
+
+Hashtag search and discovery are restricted to subscribed sources only. After this lands, every hashtag entry point — clicking a hashtag in a message, the "Public posts" tab in the search UI, the inline hashtag preview in the search "Chats" tab, deep links — is gated by a single allow-rule at the API layer. External lookups against the public web (`TL_channels_searchPosts` with no target) are silently blocked. Searches scoped to a non-subscribed chat are also blocked. Searches across the user's own messages and within subscribed channels work normally.
+
+**Implementation**:
+
+`TMessagesProj/src/main/java/org/telegram/messenger/HashtagSearchController.java`:
+- `searchHashtag(String, int, int, int)` — single gate after username resolution. Allow rule: `searchType == SEARCH_MY_MESSAGES`, OR target is a subscribed `TLRPC.Chat`, OR target is a non-bot or contact `TLRPC.User`. Otherwise: silent block — set count=0, endReached=true, post `hashtagSearchUpdated`, return.
+
+`TMessagesProj/src/main/java/org/telegram/ui/Components/SearchViewPager.java`:
+- `updateItems()` — the `if (expandedPublicPosts) { items.add(new Item(PUBLIC_POSTS_TYPE)); }` block is commented out. The `expandedPublicPosts` field, the `PUBLIC_POSTS_TYPE` constant, and the unreachable tab-title / createView branches stay in place (same pattern as `channelRow` in `ProfileActivity`).
+
+`TMessagesProj/src/main/java/org/telegram/ui/Adapters/DialogsSearchAdapter.java`:
+- The inline hashtag-preview `TL_channels_searchPosts` request block (separate from `HashtagSearchController`) is commented out. `publicPosts` stays empty → the "Public posts" header cell at the rendering site (also in this file) is naturally hidden via its existing `!publicPosts.isEmpty()` guard. The post-hoc non-subscribed-channel filter that lived inside that block is dropped (no longer load-bearing).
+
+**What stays untouched (defense-in-depth)**:
+- The post-hoc filters in `HashtagsSearchAdapter.java` and `PostsSearchContainer.java`. They remain as a second line of defense against any future code path that bypasses the controller.
+
+**Future-merge stability**: the unique strings `// CUSTOM: Block external hashtag lookup`, `Item(PUBLIC_POSTS_TYPE)`, and `TL_channels_searchPosts` are search anchors. If a future upstream release introduces a new direct caller of `TL_channels_searchPosts`, the post-merge verification walk surfaces it.
+
+### 12. Additional Features
 
 #### Auto-Update Disabled
 
@@ -509,6 +536,16 @@ Use this checklist after any modification. Each feature has specific verificatio
 | 18+ media stays redacted | 1. Open a chat or shared-media gallery containing 18+ content | Media renders with the spoiler/blur overlay; "18+" badge is still visible (upstream behavior) |
 | Tap on redacted 18+ media (chat) | 1. Tap a redacted 18+ thumbnail in a chat | Bulletin: "Sensitive (18+) content is blocked on this build". Media stays redacted |
 | Tap on redacted 18+ media (shared media) | 1. Open a profile/shared-media gallery 2. Tap a redacted 18+ thumbnail | Same bulletin as above |
+
+### External Hashtag Lookup Blocked
+| Test Case | Steps | Expected Result |
+|-----------|-------|-----------------|
+| "Public posts" tab hidden | 1. Open the global search 2. Look at the tab list | The "Public posts" tab does not appear |
+| Inline hashtag preview hidden | 1. In global search, type a hashtag like `#news` 2. Look at the "Chats" tab results | No "Public posts" header cell appears (no inline preview of public posts) |
+| Hashtag click in subscribed channel | 1. Inside a subscribed channel, tap a `#hashtag` link in a message | Search opens; results limited to messages within the same subscribed channel |
+| Hashtag click in non-subscribed channel preview | 1. Open a non-subscribed channel preview 2. Tap a `#hashtag` link in a visible message | Search opens; result list is empty (silent block) |
+| `#tag@subscribed_channel` query | 1. Type `#news@somechannel` where the channel is subscribed | Search returns messages from that channel |
+| `#tag@non_subscribed` query | 1. Type `#news@somechannel` where the channel is NOT subscribed | Search returns empty results (silent block) |
 
 ### UI Verification
 | Test Case | Steps | Expected Result |
@@ -951,7 +988,7 @@ After resolving conflicts and before reporting the merge complete:
 
 4. **Search for any `// MERGE-FLAG:` annotations** introduced during conflict resolution — these mark spots where a TLRPC type or interface may have changed shape and need verification during the build/compile pass.
 
-5. **Confirm the marker baseline.** The total `// CUSTOM:` marker count is currently **38 across 11 files** (`grep -rc "// CUSTOM:" TMessagesProj/src/ --include="*.java" | awk -F: '{s+=$2} END{print s}'`). A merge that drops the count below this baseline has lost a guard somewhere — investigate before reporting the merge complete.
+5. **Confirm the marker baseline.** The total `// CUSTOM:` marker count is currently **40 across 14 files** (`grep -rc "// CUSTOM:" TMessagesProj/src/ --include="*.java" | awk -F: '{s+=$2} END{print s}'`). A merge that drops the count below this baseline has lost a guard somewhere — investigate before reporting the merge complete.
 
 This verification is intentionally code-level only. The build/runtime test happens once after all in-flight feature work for the merge has landed.
 
@@ -985,7 +1022,7 @@ grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java" | wc -l
 
 **Modified files:**
 - `BuildVars.java` - Blocklist system, API credentials, auto-update disable
-- `DialogsSearchAdapter.java` - Global search filtering, hashtag search filtering, blocked chat filtering
+- `DialogsSearchAdapter.java` - Global search filtering, hashtag search filtering, blocked chat filtering, inline public-posts hashtag preview API call blocked
 - `ChatActivity.java` - In-chat search blocking with notification, mobile subscription blocking, comment blocking, forward header blocking, channel reply icon blocking, @mention blocking, per-message sensitive-content reveal blocked
 - `DialogsChannelsAdapter.java` - Channel discovery filtering
 - `SearchAdapterHelper.java` - Global search channel filtering, bot filtering
@@ -996,6 +1033,8 @@ grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java" | wc -l
 - `MessagesController.java` - Similar channels feature disabled, @mention navigation blocking for channels/bots, Story link blocking, sensitive-content read/write force-off, ignoreRestrictionReasons hygiene
 - `ThemeActivity.java` - "Show 18+ Content" toggle hidden in Settings
 - `Components/SharedMediaLayout.java` - Per-message sensitive-content reveal alert blocked
+- `HashtagSearchController.java` - Controller-layer gate blocking external hashtag lookup
+- `Components/SearchViewPager.java` - "Public posts" tab hidden in global search
 - `build.gradle` files - Google Services disabled, API credentials from local.properties
 - `settings.gradle` - Optional build variants disabled (Huawei, HockeyApp, Standalone, Tests)
 
