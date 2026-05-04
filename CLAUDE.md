@@ -146,7 +146,7 @@ This is a fork of the official Telegram Android app with specific modifications 
 7. **Invite link blocking** - Prevent joining groups/channels via invite links on mobile
 8. **Similar channels disabled** - Completely remove the "Similar Channels" recommendation feature
 
-**Current Base Version**: Telegram Android 12.5.1 (build 6580)
+**Current Base Version**: Telegram Android 12.6.4 (build 6666)
 **Package Name**: `org.telegram.messenger.detox`
 **Custom Features**: Chat blocklist, search filtering, channel discovery removal, mobile subscription blocking, comment control, link isolation, invite blocking, similar channels disabled, profile channel blocking, auto-update disabled
 
@@ -894,6 +894,20 @@ After merging from upstream:
 4. **Build release APK** after confirming everything works
 
 5. **Update CLAUDE.md** if upstream changes affect custom features
+
+#### Post-Merge Verification (Code-Level)
+
+After resolving conflicts and before reporting the merge complete:
+
+1. **Walk the Feature → File Mapping table** (above) top-to-bottom. For each row, open the listed file and confirm the listed function still contains the matching `// CUSTOM:` block, anchored to the user-visible action the row describes. The most common failure mode after a large upstream merge is a custom guard that survived textually but is now attached to the wrong call-site (see commit `598bbcf26` for a historical example). This pass is what catches that.
+
+2. **Spot-check the Feature Testing Checklist** by greping for the user-facing strings (e.g. `"Subscribe to the channel first to view comments"`, `"Cannot open non-subscribed channels from mobile"`, `"Cannot join via invite links on mobile"`). Each should still appear at least once. Counts should be ≥ pre-merge.
+
+3. **Verify the Android package name is intact.** `gradle.properties` must still read `APP_PACKAGE=org.telegram.messenger.detox`, and `TMessagesProj_App/build.gradle` must still set `defaultConfig.applicationId = APP_PACKAGE` (not a hardcoded string). The afatRelease build's applicationId must end up as `org.telegram.messenger.detox` and afatDebug as `org.telegram.messenger.detox.beta`. Silent regression of this is a fork-killer: the app would install as stock Telegram with our code, side-by-side with no longer being distinguishable from the official app.
+
+4. **Search for any `// MERGE-FLAG:` annotations** introduced during conflict resolution — these mark spots where a TLRPC type or interface may have changed shape and need verification during the build/compile pass.
+
+This verification is intentionally code-level only. The build/runtime test happens once after all in-flight feature work for the merge has landed.
 
 #### Recommended Update Schedule
 
