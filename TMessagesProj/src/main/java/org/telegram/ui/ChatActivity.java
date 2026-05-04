@@ -40820,6 +40820,11 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void didPressRevealSensitiveContent(ChatMessageCell cell) {
+            // CUSTOM: Sensitive (18+) content is permanently blocked - close per-message reveal escape hatch
+            BulletinFactory.of(ChatActivity.this).createErrorBulletin("Sensitive (18+) content is blocked on this build").show();
+            return;
+            // END CUSTOM
+            /*
             if (!getMessagesController().showSensitiveContent()) {
                 final AlertDialog progressDialog = new AlertDialog(getContext(), AlertDialog.ALERT_TYPE_SPINNER);
                 progressDialog.showDelayed(200);
@@ -40900,6 +40905,7 @@ public class ChatActivity extends BaseFragment implements
                 cell.getMessageObject().isSensitiveCached = false;
             }
             cell.startRevealMedia();
+            */
         }
     };
 

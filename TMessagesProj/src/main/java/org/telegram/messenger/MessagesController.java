@@ -23492,8 +23492,15 @@ public class MessagesController extends BaseController implements NotificationCe
             }
             contentSettingsLoading = false;
             if (contentSettings != null && ignoreRestrictionReasons != null) {
+                // CUSTOM: Sensitive (18+) content is permanently blocked - always strip "sensitive"
+                // from ignoreRestrictionReasons regardless of server state. We do NOT actively sync
+                // the server-side flag; the override at showSensitiveContent() is sufficient to
+                // keep this client free of sensitive content.
+                ignoreRestrictionReasons.remove("sensitive");
+                /* original:
                 if (contentSettings.sensitive_enabled) ignoreRestrictionReasons.add("sensitive");
                 else ignoreRestrictionReasons.remove("sensitive");
+                */
                 if (mainPreferences != null) {
                     mainPreferences.edit().putStringSet("ignoreRestrictionReasons", ignoreRestrictionReasons).apply();
                 }
@@ -23515,6 +23522,8 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void setContentSettings(boolean showSensitiveContent) {
+        // CUSTOM: Sensitive (18+) content is permanently blocked - force false regardless of caller
+        showSensitiveContent = false;
         if (contentSettings != null) {
             if (!contentSettings.sensitive_can_change) {
                 return;
@@ -23539,10 +23548,14 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public boolean showSensitiveContent() {
+        // CUSTOM: Sensitive (18+) content is permanently blocked on this build
+        return false;
+        /* original:
         if (contentSettings != null && System.currentTimeMillis() - contentSettingsLoadedTime < 1000 * 60 * 60) {
             return contentSettings.sensitive_enabled;
         }
         return ignoreRestrictionReasons == null || ignoreRestrictionReasons.contains("sensitive");
+        */
     }
 
     private boolean loadingArePaidReactionsAnonymous;
