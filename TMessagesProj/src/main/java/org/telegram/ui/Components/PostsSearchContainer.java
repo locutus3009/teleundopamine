@@ -211,6 +211,11 @@ public class PostsSearchContainer extends FrameLayout {
 
     private void load(final boolean pay) {
         if (loading) return;
+        if (Detox.PUBLIC_POSTS_BLOCKED) {
+            // The tab that hosts this container is hidden, but keep the request itself blocked:
+            // the point of PUBLIC_POSTS_BLOCKED is that no public-post query leaves the device.
+            return;
+        }
 
         final boolean news = TextUtils.isEmpty(lastQuery);
         if (news && newsMessagesEndReached) {

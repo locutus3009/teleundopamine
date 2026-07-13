@@ -10246,6 +10246,9 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 joinChannel.setTextAndIcon(getString(R.string.ProfileJoinChannel), R.drawable.msg_addbot);
                 joinChannel.setMinimumWidth(160);
                 joinChannel.setOnClickListener(view -> {
+                    if (Detox.guardSubscribe(profileActivity)) {
+                        return;
+                    }
                     profileActivity.finishPreviewFragment();
                     chat.left = false;
                     update(false);

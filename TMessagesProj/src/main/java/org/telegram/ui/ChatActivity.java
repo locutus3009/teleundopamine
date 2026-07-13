@@ -34858,6 +34858,9 @@ public class ChatActivity extends BaseFragment implements
 
     boolean preventReopenSearchWithText = false;
     private void openSearchWithUser(TLRPC.User user) {
+        if (Detox.guardSearch(this, null, user)) {
+            return;
+        }
         boolean delay = false;
         if (savedMessagesHint != null && savedMessagesHint.shown()) {
             savedMessagesHint.hide();
@@ -34917,6 +34920,9 @@ public class ChatActivity extends BaseFragment implements
         updatePinnedMessageView(true);
     }
     private void openSearchWithChat(TLRPC.Chat chat) {
+        if (Detox.guardSearch(this, chat, null)) {
+            return;
+        }
         boolean delay = false;
         if (savedMessagesHint != null && savedMessagesHint.shown()) {
             savedMessagesHint.hide();
@@ -40239,6 +40245,9 @@ public class ChatActivity extends BaseFragment implements
                 joinChannel.setTextAndIcon(LocaleController.getString(R.string.ProfileJoinChannel), R.drawable.msg_addbot);
                 joinChannel.setMinimumWidth(160);
                 joinChannel.setOnClickListener(view -> {
+                    if (Detox.guardSubscribe(ChatActivity.this)) {
+                        return;
+                    }
                     finishPreviewFragment();
                     chat.left = false;
                     if (cell != null && cell.channelRecommendationsCell != null) {

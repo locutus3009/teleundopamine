@@ -52,6 +52,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.LinearSmoothScrollerCustom;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.telegram.messenger.Detox;
 import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.AnimationNotificationsLocker;
@@ -2224,6 +2225,9 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
     }
 
     private void joinToGroup() {
+        if (Detox.guardSubscribe(this)) {
+            return;
+        }
         getMessagesController().addUserToChat(chatId, getUserConfig().getCurrentUser(), 0, null, this, false, () -> {
             joinRequested = false;
             updateChatInfo(true);

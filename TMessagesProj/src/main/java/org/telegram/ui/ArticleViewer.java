@@ -117,6 +117,7 @@ import androidx.viewpager.widget.ViewPager;
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
 
 import org.json.JSONObject;
+import org.telegram.messenger.Detox;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.AnimationNotificationsLocker;
 import org.telegram.messenger.ApplicationLoader;
@@ -6093,6 +6094,12 @@ public class ArticleViewer extends IArticleViewer implements NotificationCenter.
     }
 
     public static void joinChannel(int currentAccount, final BlockChannelCell cell, final TLRPC.Chat channel) {
+        if (Detox.guardSubscribe(null)) {
+            if (cell != null) {
+                cell.setState(0, false);
+            }
+            return;
+        }
         final TLRPC.TL_channels_joinChannel req = new TLRPC.TL_channels_joinChannel();
         req.channel = MessagesController.getInputChannel(channel);
         ConnectionsManager.getInstance(currentAccount).sendRequestTyped(req, (response, error) -> {

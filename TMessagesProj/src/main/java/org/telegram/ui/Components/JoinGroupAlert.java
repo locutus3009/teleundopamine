@@ -24,6 +24,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import org.telegram.messenger.Detox;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.BotGuardHelper;
 import org.telegram.messenger.ChatObject;
@@ -209,6 +210,9 @@ public class JoinGroupAlert extends BottomSheet {
                         requestProgressView.setVisibility(View.VISIBLE);
                     }
                 }, 400);
+                if (Detox.guardSubscribe(fragment)) {
+                    return;
+                }
                 if (chatInvite == null && currentChat != null) {
                     MessagesController.getInstance(currentAccount).addUserToChat(
                             currentChat.id,
