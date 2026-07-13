@@ -13,6 +13,7 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.checkerframework.checker.units.qual.A;
+import org.telegram.messenger.Detox;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.LocaleController;
@@ -95,9 +96,7 @@ public class DialogsChannelsAdapter extends UniversalAdapter {
                 for (TLObject obj : recommendations.chats) {
                     if (obj instanceof TLRPC.Chat) {
                         final TLRPC.Chat chat = (TLRPC.Chat) obj;
-                        TLRPC.Chat localChat = MessagesController.getInstance(currentAccount).getChat(chat.id);
-                        // CUSTOM: Only show subscribed channels, hide unsubscribed public channels
-                        if (!ChatObject.isNotInChat(chat) || (localChat != null && !ChatObject.isNotInChat(localChat)))
+                        if (Detox.isVisibleChannel(currentAccount, chat))
                             chats.add(chat);
                     }
                 }
@@ -116,20 +115,16 @@ public class DialogsChannelsAdapter extends UniversalAdapter {
             }
         } else {
             ArrayList<TLRPC.Chat> foundChannels = new ArrayList<>();
-            // CUSTOM: Only show subscribed channels in search results
             for (TLRPC.Chat chat : searchMyChannels) {
-                TLRPC.Chat localChat = MessagesController.getInstance(currentAccount).getChat(chat.id);
-                if (!ChatObject.isNotInChat(chat) || (localChat != null && !ChatObject.isNotInChat(localChat)))
+                if (Detox.isVisibleChannel(currentAccount, chat))
                     foundChannels.add(chat);
             }
             for (TLRPC.Chat chat : searchRecommendedChannels) {
-                TLRPC.Chat localChat = MessagesController.getInstance(currentAccount).getChat(chat.id);
-                if (!ChatObject.isNotInChat(chat) || (localChat != null && !ChatObject.isNotInChat(localChat)))
+                if (Detox.isVisibleChannel(currentAccount, chat))
                     foundChannels.add(chat);
             }
             for (TLRPC.Chat chat : searchChannels) {
-                TLRPC.Chat localChat = MessagesController.getInstance(currentAccount).getChat(chat.id);
-                if (!ChatObject.isNotInChat(chat) || (localChat != null && !ChatObject.isNotInChat(localChat)))
+                if (Detox.isVisibleChannel(currentAccount, chat))
                     foundChannels.add(chat);
             }
             if (!foundChannels.isEmpty()) {

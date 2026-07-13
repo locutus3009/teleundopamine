@@ -4,6 +4,7 @@ import android.content.Context;
 import android.text.TextUtils;
 import android.view.View;
 
+import org.telegram.messenger.Detox;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.DialogObject;
@@ -134,13 +135,8 @@ public class HashtagsSearchAdapter extends UniversalAdapter {
                     for (int i = 0; i < msgs.messages.size(); ++i) {
                         final TLRPC.Message msg = msgs.messages.get(i);
 
-                        // CUSTOM: Filter out messages from non-subscribed channels
-                        long dialogId = MessageObject.getDialogId(msg);
-                        if (DialogObject.isChatDialog(dialogId)) {
-                            TLRPC.Chat chat = controller.getChat(-dialogId);
-                            if (chat != null && ChatObject.isNotInChat(chat)) {
-                                continue; // Skip messages from non-subscribed channels
-                            }
+                        if (Detox.isBlockedMessage(currentAccount, msg)) {
+                            continue;
                         }
 
                         final MessageObject messageObject = new MessageObject(currentAccount, msg, false, true);

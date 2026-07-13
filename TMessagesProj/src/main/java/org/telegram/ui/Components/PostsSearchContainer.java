@@ -25,6 +25,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.telegram.messenger.Detox;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.DialogObject;
@@ -274,13 +275,8 @@ public class PostsSearchContainer extends FrameLayout {
                 final ArrayList<MessageObject> messages = news ? newsMessages : this.messages;
                 final boolean firstMessages = messages.isEmpty();
                 for (TLRPC.Message message : r.messages) {
-                    // CUSTOM: Filter out messages from non-subscribed channels
-                    long dialogId = MessageObject.getDialogId(message);
-                    if (DialogObject.isChatDialog(dialogId)) {
-                        TLRPC.Chat chat = messagesController.getChat(-dialogId);
-                        if (chat != null && ChatObject.isNotInChat(chat)) {
-                            continue; // Skip messages from non-subscribed channels
-                        }
+                    if (Detox.isBlockedMessage(currentAccount, message)) {
+                        continue;
                     }
 
                     final MessageObject msg = new MessageObject(currentAccount, message, false, false);

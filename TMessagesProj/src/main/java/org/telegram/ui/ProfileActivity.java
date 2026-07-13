@@ -124,6 +124,7 @@ import androidx.viewpager.widget.PagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 
 import org.telegram.PhoneFormat.PhoneFormat;
+import org.telegram.messenger.Detox;
 import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
@@ -6958,7 +6959,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             return;
         }
         // Tier 2: Block if channel is in blocked_comments.txt
-        if (currentChat != null && BuildVars.isCommentBlocked(currentChat.title)) {
+        if (Detox.isCommentBlocked(currentChat)) {
             BulletinFactory.of(this).createErrorBulletin("Discussion is blocked for this channel (see blocked_comments.txt)").show();
             return;
         }

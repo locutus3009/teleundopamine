@@ -133,6 +133,7 @@ import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
 import com.google.zxing.common.detector.MathUtils;
 
 import org.telegram.PhoneFormat.PhoneFormat;
+import org.telegram.messenger.Detox;
 import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
@@ -33997,15 +33998,7 @@ public class ChatActivity extends BaseFragment implements
     }
 
     public void openSearchWithText(String text) {
-        // CUSTOM: Block search in restricted chats
-        String chatName = null;
-        if (getCurrentUser() != null) {
-            chatName = UserObject.getUserName(getCurrentUser());
-        } else if (getCurrentChat() != null) {
-            chatName = getCurrentChat().title;
-        }
-        if (chatName != null && BuildVars.isChatBlocked(chatName)) {
-            BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Search is blocked for this chat (see blocked_chats.txt)").show();
+        if (Detox.guardSearch(this, getCurrentChat(), getCurrentUser())) {
             return;
         }
 
@@ -40607,7 +40600,7 @@ public class ChatActivity extends BaseFragment implements
                     return;
                 }
                 // Block if channel is in blocked_comments.txt
-                if (currentChat.title != null && BuildVars.isCommentBlocked(currentChat.title)) {
+                if (Detox.isCommentBlocked(currentChat)) {
                     BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.chats_infotip, "Comments are blocked for this channel (see blocked_comments.txt)").show();
                     return;
                 }
