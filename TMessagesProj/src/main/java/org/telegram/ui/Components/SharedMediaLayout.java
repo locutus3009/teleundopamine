@@ -75,6 +75,7 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.telegram.messenger.Detox;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.AnimationNotificationsLocker;
 import org.telegram.messenger.ApplicationLoader;
@@ -3146,15 +3147,9 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                     final SharedPhotoVideoCell2 cell = (SharedPhotoVideoCell2) view;
                     final MessageObject messageObject = cell.getMessageObject();
                     if (messageObject != null && messageObject.isSensitive()) {
-                        // CUSTOM: Sensitive (18+) content is permanently blocked - close per-message reveal escape hatch
-                        if (profileActivity != null) {
-                            BulletinFactory.of(profileActivity).createErrorBulletin("Sensitive (18+) content is blocked on this build").show();
-                        } else {
-                            BulletinFactory.global().createErrorBulletin("Sensitive (18+) content is blocked on this build").show();
+                        if (Detox.guardSensitive(profileActivity)) {
+                            return;
                         }
-                        return;
-                        // END CUSTOM
-                        /*
                         if (profileActivity == null) return;
                         final int currentAccount = profileActivity.getCurrentAccount();
                         final MessagesController messagesController = MessagesController.getInstance(currentAccount);
@@ -3226,7 +3221,6 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                             }
                         });
                         return;
-                        */
                     }
                     if (cell.canRevealSpoiler()) {
                         cell.startRevealMedia(x, y);

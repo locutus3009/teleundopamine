@@ -8491,10 +8491,9 @@ public class ChatActivity extends BaseFragment implements
             } else {
                 if (ChatObject.isChannel(currentChat) && !(currentChat instanceof TLRPC.TL_channelForbidden)) {
                     if (ChatObject.isNotInChat(currentChat)) {
-                        // CUSTOM: Block channel subscription on mobile - use desktop to subscribe
-                        BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Please use desktop Telegram to subscribe to new channels").show();
-                        return;
-                        /*
+                        if (Detox.guardSubscribe(this)) {
+                            return;
+                        }
                         if (currentChat.join_request) {
 //                            showDialog(new JoinGroupAlert(context, currentChat, null, this));
                             showBottomOverlayProgress(true, true);
@@ -8533,7 +8532,6 @@ public class ChatActivity extends BaseFragment implements
                                 getNotificationCenter().postNotificationName(NotificationCenter.peerSettingsDidLoad, dialog_id);
                             }
                         }
-                        */
                     } else {
                         toggleMute(true);
                     }
@@ -35431,24 +35429,14 @@ public class ChatActivity extends BaseFragment implements
         } else if (url instanceof URLSpanUserMention) {
             long id = Utilities.parseLong(((URLSpanUserMention) url).getURL());
             if (id < 0) {
-                // CUSTOM: Block @mention clicks for non-subscribed channels
                 TLRPC.Chat chat = getMessagesController().getChat(-id);
-                if (chat != null) {
-                    if (ChatObject.isNotInChat(chat)) {
-                        BulletinFactory.of(ChatActivity.this).createErrorBulletin("Cannot open non-subscribed channels from mobile (use desktop)").show();
-                    } else {
-                        MessagesController.getInstance(currentAccount).openChatOrProfileWith(null, chat, ChatActivity.this, 1, false);
-                    }
+                if (chat != null && !Detox.guardOpen(ChatActivity.this, chat)) {
+                    MessagesController.getInstance(currentAccount).openChatOrProfileWith(null, chat, ChatActivity.this, 1, false);
                 }
             } else {
                 TLRPC.User user = getMessagesController().getUser(id);
-                if (user != null) {
-                    // CUSTOM: Block @mention clicks for non-contact bots
-                    if (user.bot && !user.contact) {
-                        BulletinFactory.of(ChatActivity.this).createErrorBulletin("Cannot open non-subscribed bots from mobile (use desktop)").show();
-                    } else {
-                        MessagesController.getInstance(currentAccount).openChatOrProfileWith(user, null, ChatActivity.this, 0, false);
-                    }
+                if (user != null && !Detox.guardOpen(ChatActivity.this, user)) {
+                    MessagesController.getInstance(currentAccount).openChatOrProfileWith(user, null, ChatActivity.this, 0, false);
                 }
             }
             if (longPress && cell != null) {
@@ -38247,11 +38235,7 @@ public class ChatActivity extends BaseFragment implements
                 processRowSelect(cell, true, touchX, touchY);
                 return;
             }
-            // CUSTOM: Mobile subscription blocking - Channel reply icon and forward header paths
-            // Block navigation to non-subscribed channels from both forward headers AND channel reply icons
-            if (ChatObject.isNotInChat(chat)) {
-                FileLog.d("[BYPASS_FIX] Channel avatar click blocked for non-subscribed channel: " + chat.title + " (asForward=" + asForward + ")");
-                BulletinFactory.of(ChatActivity.this).createErrorBulletin("Subscribing to channels on mobile is disabled. Please use desktop.").show();
+            if (Detox.guardOpen(ChatActivity.this, chat)) {
                 return;
             }
             if (!asForward && chat != null && chat.signature_profiles) {
@@ -38439,10 +38423,7 @@ public class ChatActivity extends BaseFragment implements
                 didPressInstantButton(cell, 10);
                 return;
             }
-            // CUSTOM: Block forward header clicks to non-contact bots
-            // Regular users are allowed, but bots require being added as contact first
-            if (asForward && user != null && user.bot && !user.contact) {
-                BulletinFactory.of(ChatActivity.this).createErrorBulletin("Cannot open non-subscribed bots from mobile (use desktop)").show();
+            if (asForward && Detox.guardOpen(ChatActivity.this, user)) {
                 return;
             }
             openProfile(user, ChatObject.isForum(currentChat) || isThreadChat());
@@ -40592,18 +40573,8 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void didPressCommentButton(ChatMessageCell cell) {
-            // CUSTOM: Block comments on non-subscribed channels and channels in blocked_comments.txt
-            if (currentChat != null) {
-                // Block if not subscribed to the channel
-                if (ChatObject.isNotInChat(currentChat)) {
-                    BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.chats_infotip, "Subscribe to the channel first to view comments").show();
-                    return;
-                }
-                // Block if channel is in blocked_comments.txt
-                if (Detox.isCommentBlocked(currentChat)) {
-                    BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.chats_infotip, "Comments are blocked for this channel (see blocked_comments.txt)").show();
-                    return;
-                }
+            if (Detox.guardComments(ChatActivity.this, currentChat, false)) {
+                return;
             }
 
             MessageObject.GroupedMessages group = cell.getCurrentMessagesGroup();
@@ -40824,11 +40795,9 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void didPressRevealSensitiveContent(ChatMessageCell cell) {
-            // CUSTOM: Sensitive (18+) content is permanently blocked - close per-message reveal escape hatch
-            BulletinFactory.of(ChatActivity.this).createErrorBulletin("Sensitive (18+) content is blocked on this build").show();
-            return;
-            // END CUSTOM
-            /*
+            if (Detox.guardSensitive(ChatActivity.this)) {
+                return;
+            }
             if (!getMessagesController().showSensitiveContent()) {
                 final AlertDialog progressDialog = new AlertDialog(getContext(), AlertDialog.ALERT_TYPE_SPINNER);
                 progressDialog.showDelayed(200);
@@ -40909,7 +40878,6 @@ public class ChatActivity extends BaseFragment implements
                 cell.getMessageObject().isSensitiveCached = false;
             }
             cell.startRevealMedia();
-            */
         }
     };
 

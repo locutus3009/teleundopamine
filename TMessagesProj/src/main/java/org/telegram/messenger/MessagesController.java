@@ -21697,19 +21697,7 @@ public class MessagesController extends BaseController implements NotificationCe
             return;
         }
 
-        // CUSTOM: Mobile subscription blocking - Story link path
-        // Block navigation to non-subscribed channels (e.g., from Story links)
-        if (chat != null && ChatObject.isChannel(chat) && ChatObject.isNotInChat(chat)) {
-            FileLog.d("[BYPASS_FIX] Story/link click blocked for non-subscribed channel: " + chat.title);
-            BulletinFactory.of(fragment).createErrorBulletin("Subscribing to channels on mobile is disabled. Please use desktop.").show();
-            return;
-        }
-
-        // CUSTOM: Mobile subscription blocking - Story link path (bots)
-        // Block navigation to non-contact bots (e.g., from Story links)
-        if (user != null && user.bot && !user.contact) {
-            FileLog.d("[BYPASS_FIX] Story/link click blocked for non-contact bot: " + UserObject.getUserName(user));
-            BulletinFactory.of(fragment).createErrorBulletin("Subscribing to channels on mobile is disabled. Please use desktop.").show();
+        if (Detox.guardOpen(fragment, chat) || Detox.guardOpen(fragment, user)) {
             return;
         }
 
@@ -21781,22 +21769,18 @@ public class MessagesController extends BaseController implements NotificationCe
             }
         }
         if (user != null) {
-            // CUSTOM: Block @mention navigation to non-contact bots
-            if (user.bot && !user.contact) {
+            if (Detox.guardOpen(fragment, user)) {
                 if (progress != null) {
                     progress.end();
                 }
-                BulletinFactory.of(fragment).createErrorBulletin("Cannot open non-subscribed bots from mobile (use desktop)").show();
                 return;
             }
             openChatOrProfileWith(user, null, fragment, type, false);
         } else if (chat != null) {
-            // CUSTOM: Block @mention navigation to non-subscribed channels
-            if (ChatObject.isNotInChat(chat)) {
+            if (Detox.guardOpen(fragment, chat)) {
                 if (progress != null) {
                     progress.end();
                 }
-                BulletinFactory.of(fragment).createErrorBulletin("Cannot open non-subscribed channels from mobile (use desktop)").show();
                 return;
             }
             openChatOrProfileWith(null, chat, fragment, 1, false);
@@ -21823,18 +21807,14 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
                 if (peerId != null) {
                     if (peerId < 0) {
-                        // CUSTOM: Block @mention navigation to non-subscribed channels (async path)
                         TLRPC.Chat resolvedChat = getChat(-peerId);
-                        if (resolvedChat != null && ChatObject.isNotInChat(resolvedChat)) {
-                            BulletinFactory.of(fragment).createErrorBulletin("Cannot open non-subscribed channels from mobile (use desktop)").show();
+                        if (Detox.guardOpen(fragment, resolvedChat)) {
                             return;
                         }
                         openChatOrProfileWith(null, resolvedChat, fragment, 1, false);
                     } else {
-                        // CUSTOM: Block @mention navigation to non-contact bots (async path)
                         TLRPC.User resolvedUser = getUser(peerId);
-                        if (resolvedUser != null && resolvedUser.bot && !resolvedUser.contact) {
-                            BulletinFactory.of(fragment).createErrorBulletin("Cannot open non-subscribed bots from mobile (use desktop)").show();
+                        if (Detox.guardOpen(fragment, resolvedUser)) {
                             return;
                         }
                         openChatOrProfileWith(resolvedUser, null, fragment, type, false);

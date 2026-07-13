@@ -6781,11 +6781,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void onJoinClicked(boolean fromActions) {
-        // CUSTOM: Mobile subscription blocking - Prevent channel join on mobile, require desktop
-        BulletinFactory.of(this).createErrorBulletin("Please use desktop Telegram to subscribe to new channels").show();
-        return;
-        // END CUSTOM
-        /*
+        if (Detox.guardSubscribe(this)) {
+            return;
+        }
         BaseFragment lastFragment = parentLayout.getLastFragment();
         final boolean[] result = new boolean[]{true};
         getMessagesController().addUserToChat(currentChat.id, getUserConfig().getCurrentUser(), 0, null, ProfileActivity.this, true, () -> {
@@ -6823,7 +6821,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             return true;
         });
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.closeSearchByActiveAction);
-        */
     }
 
     private void onWriteButtonClick() {
@@ -6952,15 +6949,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         if (chatInfo == null || chatInfo.linked_chat_id == 0) {
             return;
         }
-        // CUSTOM: Comment access control - Block discussion access (two-tier)
-        // Tier 1: Block if not subscribed to the channel
-        if (currentChat != null && ChatObject.isNotInChat(currentChat)) {
-            BulletinFactory.of(this).createErrorBulletin("Subscribe to the channel first to view discussion").show();
-            return;
-        }
-        // Tier 2: Block if channel is in blocked_comments.txt
-        if (Detox.isCommentBlocked(currentChat)) {
-            BulletinFactory.of(this).createErrorBulletin("Discussion is blocked for this channel (see blocked_comments.txt)").show();
+        if (Detox.guardComments(this, currentChat, true)) {
             return;
         }
         Bundle args = new Bundle();
