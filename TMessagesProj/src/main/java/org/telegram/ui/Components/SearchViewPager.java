@@ -31,6 +31,7 @@ import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.telegram.messenger.Detox;
 import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
@@ -1492,11 +1493,9 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
         public void updateItems() {
             items.clear();
             items.add(new Item(DIALOGS_TYPE));
-            // CUSTOM: Block external hashtag lookup - hide "Public posts" tab
-            // (See HashtagSearchController.searchHashtag() for the API-layer enforcement.)
-            // if (expandedPublicPosts) {
-            //     items.add(new Item(PUBLIC_POSTS_TYPE));
-            // }
+            if (!Detox.PUBLIC_POSTS_BLOCKED && expandedPublicPosts) {
+                items.add(new Item(PUBLIC_POSTS_TYPE));
+            }
             items.add(new Item(CHANNELS_TYPE));
             items.add(new Item(BOTS_TYPE));
             items.add(new Item(POSTS_TYPE));

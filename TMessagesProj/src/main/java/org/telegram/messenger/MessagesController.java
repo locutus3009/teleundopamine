@@ -22599,11 +22599,9 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public ChannelRecommendations getChannelRecommendations(long dialogId) {
-        // CUSTOM: Disable Similar Channels/Bots feature completely to prevent discovery
-        // This blocks the "Similar Channels" section in channel profiles and the recommendations
-        // shown after joining a channel. Users can't discover new channels through this feature.
-        return null;
-        /*
+        if (Detox.RECOMMENDATIONS_BLOCKED) {
+            return null;
+        }
         if (cachedChannelRecommendations == null) {
             cachedChannelRecommendations = new HashMap<>();
         }
@@ -22663,7 +22661,6 @@ public class MessagesController extends BaseController implements NotificationCe
             }
         }));
         return rec;
-        */
     }
 
     private HashSet<Long> loadingReactionTags;
@@ -23472,15 +23469,15 @@ public class MessagesController extends BaseController implements NotificationCe
             }
             contentSettingsLoading = false;
             if (contentSettings != null && ignoreRestrictionReasons != null) {
-                // CUSTOM: Sensitive (18+) content is permanently blocked - always strip "sensitive"
-                // from ignoreRestrictionReasons regardless of server state. We do NOT actively sync
-                // the server-side flag; the override at showSensitiveContent() is sufficient to
-                // keep this client free of sensitive content.
-                ignoreRestrictionReasons.remove("sensitive");
-                /* original:
-                if (contentSettings.sensitive_enabled) ignoreRestrictionReasons.add("sensitive");
-                else ignoreRestrictionReasons.remove("sensitive");
-                */
+                if (Detox.SENSITIVE_BLOCKED) {
+                    // Strip regardless of server state. The server-side flag is not actively synced;
+                    // the override in showSensitiveContent() is what keeps this client clean.
+                    ignoreRestrictionReasons.remove("sensitive");
+                } else if (contentSettings.sensitive_enabled) {
+                    ignoreRestrictionReasons.add("sensitive");
+                } else {
+                    ignoreRestrictionReasons.remove("sensitive");
+                }
                 if (mainPreferences != null) {
                     mainPreferences.edit().putStringSet("ignoreRestrictionReasons", ignoreRestrictionReasons).apply();
                 }
@@ -23502,8 +23499,9 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void setContentSettings(boolean showSensitiveContent) {
-        // CUSTOM: Sensitive (18+) content is permanently blocked - force false regardless of caller
-        showSensitiveContent = false;
+        if (Detox.SENSITIVE_BLOCKED) {
+            showSensitiveContent = false;
+        }
         if (contentSettings != null) {
             if (!contentSettings.sensitive_can_change) {
                 return;
@@ -23528,14 +23526,13 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public boolean showSensitiveContent() {
-        // CUSTOM: Sensitive (18+) content is permanently blocked on this build
-        return false;
-        /* original:
+        if (Detox.SENSITIVE_BLOCKED) {
+            return false;
+        }
         if (contentSettings != null && System.currentTimeMillis() - contentSettingsLoadedTime < 1000 * 60 * 60) {
             return contentSettings.sensitive_enabled;
         }
         return ignoreRestrictionReasons == null || ignoreRestrictionReasons.contains("sensitive");
-        */
     }
 
     private boolean loadingArePaidReactionsAnonymous;

@@ -52,6 +52,7 @@ import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.telegram.messenger.Detox;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLoader;
@@ -699,11 +700,9 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
             otherHeaderRow = rowCount++;
             directShareRow = rowCount++;
             TL_account.contentSettings contentSettings = getMessagesController().getContentSettings();
-            // CUSTOM: Hide "Show 18+ Content" toggle - sensitive content is permanently blocked
-            // (See MessagesController.showSensitiveContent() for the underlying enforcement.)
-            // if (contentSettings != null && contentSettings.sensitive_can_change) {
-            //     sensitiveContentRow = rowCount++;
-            // }
+            if (!Detox.SENSITIVE_BLOCKED && contentSettings != null && contentSettings.sensitive_can_change) {
+                sensitiveContentRow = rowCount++;
+            }
             sendByEnterRow = rowCount++;
             distanceRow = rowCount++;
             otherSectionRow = rowCount++;

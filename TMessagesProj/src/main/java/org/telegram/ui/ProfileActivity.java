@@ -10507,16 +10507,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     unofficialSecurityRiskDividerRow = rowCount++;
                 }
 
-                // CUSTOM: Block profile channel links - completely hide personal channel row in user profiles
-                // This prevents discovery of channels through user profiles on mobile.
-                // Original code preserved below (commented out, kept in sync with upstream shape):
-                // if (userInfo != null && (userInfo.flags2 & 64) != 0 && (profileChannelMessageFetcher == null || !profileChannelMessageFetcher.loaded || !profileChannelMessageFetcher.messageObjects.isEmpty())) {
-                //     final TLRPC.Chat channel = getMessagesController().getChat(userInfo.personal_channel_id);
-                //     if (channel != null && (ChatObject.isPublic(channel) || !ChatObject.isNotInChat(channel))) {
-                //         channelRow = rowCount++;
-                //         channelDividerRow = rowCount++;
-                //     }
-                // }
+                if (!Detox.PROFILE_CHANNEL_BLOCKED && userInfo != null && (userInfo.flags2 & 64) != 0 && (profileChannelMessageFetcher == null || !profileChannelMessageFetcher.loaded || !profileChannelMessageFetcher.messageObjects.isEmpty())) {
+                    final TLRPC.Chat channel = getMessagesController().getChat(userInfo.personal_channel_id);
+                    if (channel != null && (ChatObject.isPublic(channel) || !ChatObject.isNotInChat(channel))) {
+                        channelRow = rowCount++;
+                        channelDividerRow = rowCount++;
+                    }
+                }
                 infoStartRow = rowCount;
                 if (!isBot && (hasPhone || !hasInfo)) {
                     phoneRow = rowCount++;

@@ -7561,12 +7561,10 @@ public class ChatActivity extends BaseFragment implements
             searchViewPager.setAdapter(new ViewPagerFixed.Adapter() {
                 @Override
                 public int getItemCount() {
-                    // CUSTOM: Block external hashtag lookup - hide "Public Posts" tab in hashtag search.
-                    // Was 3 (this chat / my messages / public posts); now 2 (this chat / my messages).
-                    // The unreachable case branches for SEARCH_PUBLIC_POSTS in createView() and
-                    // getItemTitle() below stay in place (defensive, same pattern as channelRow).
-                    return 2;
-                    // return 3;
+                    // Tabs: this chat / my messages / public posts. Dropping the last one must stay in
+                    // lockstep with defaultSearchPage below, or scrollToTab(2) targets a tab that is
+                    // no longer there and crashes.
+                    return Detox.PUBLIC_POSTS_BLOCKED ? 2 : 3;
                 }
 
                 @Override
@@ -34112,17 +34110,11 @@ public class ChatActivity extends BaseFragment implements
         if (searchUserButton != null) {
             searchUserButton.setVisibility(View.GONE);
         }
-        // CUSTOM: Block external hashtag lookup - "Public Posts" tab is hidden, so always
-        // default to "This Chat" (page 0). Without this clamp, scrollToTab(2, 2) would target
-        // a non-existent tab (the adapter now returns getItemCount() = 2) and crash.
-        defaultSearchPage = 0;
-        /* original:
-        if (channelHashtags || forcePublic || ChatObject.isChannelAndNotMegaGroup(currentChat) && ChatObject.isPublic(currentChat) && searchingHashtag != null) {
+        if (!Detox.PUBLIC_POSTS_BLOCKED && (channelHashtags || forcePublic || ChatObject.isChannelAndNotMegaGroup(currentChat) && ChatObject.isPublic(currentChat) && searchingHashtag != null)) {
             defaultSearchPage = 2;
         } else {
             defaultSearchPage = 0;
         }
-        */
         openSearchKeyboard = false;
         if (searchType == SEARCH_CHANNEL_POSTS) {
             HashtagSearchController.getInstance(currentAccount).clearSearchResults(SEARCH_CHANNEL_POSTS);
