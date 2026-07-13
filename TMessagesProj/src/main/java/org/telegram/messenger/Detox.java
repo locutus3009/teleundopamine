@@ -46,6 +46,8 @@ public class Detox {
     public static final boolean PUBLIC_POSTS_BLOCKED = true;
     public static final boolean PROFILE_CHANNEL_BLOCKED = true;
     public static final boolean AI_EDITOR_BLOCKED = true;
+    public static final boolean PACK_SEARCH_BLOCKED = true;
+    public static final boolean GUEST_BOT_HINTS_BLOCKED = true;
 
     // ------------------------------------------------------------------
     // User-facing strings. One string per event, one bulletin style.

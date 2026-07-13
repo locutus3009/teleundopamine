@@ -33,7 +33,7 @@ if (Detox.guardSubscribe(this)) {
 
 Find every binding:
 ```bash
-grep -rn "Detox\." TMessagesProj/src/ --include="*.java" | grep -v "/Detox.java:"
+grep -rna "Detox\." TMessagesProj/src/ --include="*.java" | grep -v "/Detox.java:"
 ```
 
 Two rules govern every modification:
@@ -975,8 +975,10 @@ After resolving conflicts and before reporting the merge complete:
 
 1. **Run the loss detector.** Every public member of `Detox` must have at least one call site in an upstream file. A member with zero call sites means the merge silently ate a guard. List the bindings and check them against the Detox Inventory above:
    ```bash
-   grep -rn "Detox\." TMessagesProj/src/ --include="*.java" | grep -v "/Detox.java:"
+   grep -rna "Detox\." TMessagesProj/src/ --include="*.java" | grep -v "/Detox.java:"
    ```
+   **The `-a` is load-bearing.** `grep` on this machine is `ugrep`, which will classify some of the larger Java files (`ChatActivity`, `MessagesController`) as binary and silently skip them — turning the detector into a false "a guard was lost" alarm, or worse, hiding a guard that really was lost. Always pass `-a`.
+
    String constants are exempt — they are referenced only from inside `Detox` itself. Members used only inside `Detox` are `private` and never appear here.
 
 2. **Check call-site anchoring.** A binding being *present* is not enough — open it and confirm it is still attached to the user-visible action it is supposed to block. The classic failure after a large merge is a guard that survives textually but reattaches to the wrong call site (see commit `598bbcf26` for the historical example). `ChatActivity.java` is where this is most likely: it carries the largest upstream diff and hosts the most bindings.

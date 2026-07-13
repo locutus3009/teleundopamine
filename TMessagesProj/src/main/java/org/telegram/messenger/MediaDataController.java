@@ -9981,6 +9981,14 @@ public class MediaDataController extends BaseController {
     }
 
     public void searchStickerSets(boolean emojis, String query, Utilities.Callback<ArrayList<TLRPC.StickerSetCovered>> callback) {
+        if (Detox.PACK_SEARCH_BLOCKED) {
+            // No public pack lookup. Searching already-installed packs is unaffected: it never
+            // reaches this method. An empty result hides the whole "Global Search Result" carousel.
+            if (callback != null) {
+                callback.run(new ArrayList<>());
+            }
+            return;
+        }
         TLMethod<TLRPC.messages_FoundStickerSets> r;
         if (emojis) {
             TLRPC.TL_messages_searchEmojiStickerSets req = new TLRPC.TL_messages_searchEmojiStickerSets();

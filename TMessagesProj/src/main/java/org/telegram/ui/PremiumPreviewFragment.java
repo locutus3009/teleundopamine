@@ -56,6 +56,7 @@ import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.Purchase;
 
 import org.telegram.PhoneFormat.PhoneFormat;
+import org.telegram.messenger.Detox;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.BillingController;
 import org.telegram.messenger.BuildVars;
@@ -1020,7 +1021,9 @@ public class PremiumPreviewFragment extends BaseFragment implements Notification
         premiumFeatures.add(new PremiumFeatureData(PREMIUM_FEATURE_MESSAGE_EFFECTS, R.drawable.menu_premium_effects, getString(R.string.PremiumPreviewEffects), getString(R.string.PremiumPreviewEffectsDescription)));
         premiumFeatures.add(new PremiumFeatureData(PREMIUM_FEATURE_TODO, R.drawable.msg_premium_icons, getString(R.string.PremiumPreviewTodo), getString(R.string.PremiumPreviewTodoDescription)));
         premiumFeatures.add(new PremiumFeatureData(PREMIUM_FEATURE_SHARING_DISABLE, R.drawable.filled_sharing_off2_24, getString(R.string.PremiumPreviewSharingDisable), getString(R.string.PremiumPreviewSharingDisableDescription)));
-        premiumFeatures.add(new PremiumFeatureData(PREMIUM_FEATURE_AI_EDITOR, R.drawable.premium_ai_editor, getString(R.string.PremiumPreviewAIEditor), getString(R.string.PremiumPreviewAIEditorDescription)));
+        if (!Detox.AI_EDITOR_BLOCKED) {
+            premiumFeatures.add(new PremiumFeatureData(PREMIUM_FEATURE_AI_EDITOR, R.drawable.premium_ai_editor, getString(R.string.PremiumPreviewAIEditor), getString(R.string.PremiumPreviewAIEditorDescription)));
+        }
 
         if (messagesController.premiumFeaturesTypesToPosition.size() > 0) {
             for (int i = 0; i < premiumFeatures.size(); i++) {

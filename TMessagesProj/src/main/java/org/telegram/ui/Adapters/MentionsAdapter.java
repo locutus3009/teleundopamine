@@ -30,6 +30,7 @@ import android.widget.TextView;
 import androidx.collection.LongSparseArray;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.telegram.messenger.Detox;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.ContactsController;
@@ -1263,7 +1264,7 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
             final ArrayList<TLRPC.TL_topPeer> bots = new ArrayList<>();
             bots.addAll(MediaDataController.getInstance(currentAccount).inlineBots);
 
-            if (currentChat == null || !(ChatObject.isMonoForum(currentChat) || ChatObject.isChannelAndNotMegaGroup(currentChat))) {
+            if (!Detox.GUEST_BOT_HINTS_BLOCKED && (currentChat == null || !(ChatObject.isMonoForum(currentChat) || ChatObject.isChannelAndNotMegaGroup(currentChat)))) {
                 bots.addAll(MediaDataController.getInstance(currentAccount).guestBots);
             }
 
