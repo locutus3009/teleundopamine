@@ -19,97 +19,84 @@ A modified version of the official Telegram Android client designed to reduce do
 | Blocklists (edit these) | Project root: `blocked_chats.txt`, `blocked_comments.txt` |
 | Build output | `TMessagesProj_App/build/outputs/apk/afat/` |
 
-### Custom Code Marker
-All custom modifications use: `// CUSTOM: [description]`
+### The Detox Convention
 
-Find all custom code:
-```bash
-grep -r "// CUSTOM:" TMessagesProj/src/ --include="*.java"
+All fork policy lives in **one file**: `TMessagesProj/src/main/java/org/telegram/messenger/Detox.java`. It holds the kill-switch constants, the blocklists, the user-facing strings, the predicates and the guards. It has no upstream counterpart, so it can never conflict during a merge.
+
+Upstream files contain only one-line bindings into it:
+
+```java
+if (Detox.guardSubscribe(this)) {
+    return;
+}
 ```
+
+Find every binding:
+```bash
+grep -rn "Detox\." TMessagesProj/src/ --include="*.java" | grep -v "/Detox.java:"
+```
+
+Two rules govern every modification:
+
+1. **Never delete or comment out upstream code — wrap it in a `Detox` flag check.** A comment cannot absorb an incoming upstream edit, so it conflicts on every merge; live code merges normally. Note that `if (Detox.FLAG) return;` does not make the code below it an "unreachable statement" error — JLS 14.21 exempts `if` from unreachability analysis precisely for this idiom. That is what lets the upstream body stay live.
+
+2. **Every public member of `Detox` must have at least one call site in an upstream file.** A member with zero call sites means a merge silently ate a guard. Members used only inside `Detox` are `private`, so they never trip this check.
+
+The `// CUSTOM:` marker convention that predated this file is **retired**. There should be zero `// CUSTOM:` markers in the tree. The compiled token `Detox.` replaces them, and unlike a comment it cannot be dropped without breaking the build.
 
 ### Before Making Changes
 1. Read relevant section in this document
-2. Search for existing `// CUSTOM:` markers in target file
-3. Preserve all existing custom functionality
-4. Add `// CUSTOM:` marker to any new modifications
-5. Update this document if adding new features
+2. Add the policy to `Detox.java` (a constant for a server-gated feature, a guard for a click path, a predicate for a result filter)
+3. Add the one-line binding at the call site — wrap upstream code, never comment it out
+4. Update the Detox Inventory table below
+5. Build: `./gradlew assembleAfatRelease`
 
 ---
 
-## Architecture: Feature → File Mapping
+## Architecture: The Detox Inventory
 
-### Blocklist System
-| Feature | File | Key Functions/Locations |
-|---------|------|-------------------------|
-| Chat blocklist loading | `BuildVars.java` | `loadBlockedChats()`, `isChatBlocked()` |
-| Comment blocklist loading | `BuildVars.java` | `loadBlockedComments()`, `isCommentBlocked()` |
-| Auto-update disabled | `BuildVars.java` | `CHECK_UPDATES = false` |
-| API credentials | `BuildVars.java` | `APP_ID`, `APP_HASH` from BuildConfig |
+Every restriction this fork applies, and where it binds into upstream code. This table **is** the post-merge loss detector: if a member below has no call site after a merge, a guard was eaten.
 
-### Search Filtering
-| Feature | File | Key Functions/Locations |
-|---------|------|-------------------------|
-| Dialog search filtering | `DialogsSearchAdapter.java` | `filter()` method |
-| Message search filtering | `DialogsSearchAdapter.java` | Message processing loop in search results handler |
-| Hashtag search filtering | `DialogsSearchAdapter.java` | Hashtag results processing |
-| Global search channel filtering | `SearchAdapterHelper.java` | Global search result processing loop |
-| Global search bot filtering | `SearchAdapterHelper.java` | Bot check in global search loop |
-| Hashtag adapter filtering | `HashtagsSearchAdapter.java` | Search result processing |
-| Public posts filtering | `PostsSearchContainer.java` | Message processing loop |
-| In-chat search blocking | `ChatActivity.java` | `openSearchWithText()` |
+### Guards — block an action and show a bulletin
+Each returns `true` meaning "blocked, bulletin shown, caller must return now".
 
-### Channel Discovery Removal
-| Feature | File | Key Functions/Locations |
-|---------|------|-------------------------|
-| Recommended channels | `DialogsChannelsAdapter.java` | Recommendations processing loop |
-| Channel search results | `DialogsChannelsAdapter.java` | Search results processing |
-| Similar channels disabled | `MessagesController.java` | `getChannelRecommendations()` |
+| `Detox` member | Blocks | Call sites |
+|---|---|---|
+| `guardOpen(f, Chat)` | Opening a channel/group we have not joined | `ChatActivity` — `URLSpanUserMention` handler, `didPressChannelAvatar()` (forward header + channel reply icon); `MessagesController` — `openChatOrProfileWith()` (story links), `openByUserName()` cached path, `openByUserName()` async callback |
+| `guardOpen(f, User)` | Opening a bot we have not added as a contact | `ChatActivity` — `URLSpanUserMention` handler, `didPressUserAvatar()` (forward headers only); `MessagesController` — `openChatOrProfileWith()`, `openByUserName()` cached path, `openByUserName()` async callback |
+| `guardOpenPeer(f, acct, peerId)` | Same, for a raw peer id | `LaunchActivity` — username-resolution callback (t.me / tg:// URL intents) |
+| `guardSubscribe(f)` | Joining a channel from mobile (always) | `ProfileActivity.onJoinClicked()`; `ChatActivity` bottom-overlay JOIN button |
+| `guardComments(f, chat, discussion)` | Comments/discussion: not subscribed, or listed in `blocked_comments.txt` | `ChatActivity.didPressCommentButton()` (`discussion=false`); `ProfileActivity.openDiscussion()` (`discussion=true`) |
+| `guardSearch(f, chat, user)` | In-chat search for chats named in `blocked_chats.txt` | `ChatActivity.openSearchWithText()` |
+| `guardSensitive(f)` | Revealing 18+ media | `ChatActivity.didPressRevealSensitiveContent()`; `SharedMediaLayout` cell-tap dispatcher (`isSensitive()` branch) |
+| `guardInviteLink(f)` | Joining via invite link on mobile (always) | `LaunchActivity` — `group != null` branch |
+| `guardHashtagSearch(type, target)` | Hashtag lookup outside our own messages / subscribed sources. **Silent** — no bulletin | `HashtagSearchController.searchHashtag()` |
 
-### Subscription & Access Control
-| Feature | File | Key Functions/Locations |
-|---------|------|-------------------------|
-| Profile JOIN button | `ProfileActivity.java` | `onJoinClicked()` |
-| Chat JOIN button | `ChatActivity.java` | Bottom panel JOIN button handler |
-| Discussion access | `ProfileActivity.java` | `openDiscussion()` |
-| Comment button | `ChatActivity.java` | `didPressCommentButton()` callback |
-| Profile channel links | `ProfileActivity.java` | `updateRowsIds()` - channelRow disabled |
+### Predicates — filter results, no UI
 
-### Sensitive (18+) Content Lockdown
-| Feature | File | Key Functions/Locations |
-|---------|------|-------------------------|
-| Read API force-false | `MessagesController.java` | `showSensitiveContent()` returns `false` |
-| Write API defensive force-false | `MessagesController.java` | `setContentSettings(boolean)` first line |
-| Local hygiene strip | `MessagesController.java` | `getContentSettings(callback)` callback |
-| Toggle row hidden | `ThemeActivity.java` | `updateRowsIds()` row allocation commented out |
-| Per-message reveal blocked (chat) | `ChatActivity.java` | `didPressRevealSensitiveContent()` |
-| Per-message reveal blocked (shared media) | `SharedMediaLayout.java` | `isSensitive()` branch in cell-tap dispatcher |
+| `Detox` member | Filters out | Call sites |
+|---|---|---|
+| `isBlockedChat(chat)` | Channels/groups we have not joined | `SearchAdapterHelper` global-search loop |
+| `isBlockedUser(user)` | Non-contact bots | `SearchAdapterHelper` global-search loop |
+| `isBlockedMessage(acct, msg)` | Messages posted in channels we have not joined | `PostsSearchContainer`; `HashtagsSearchAdapter`; `DialogsSearchAdapter` inline hashtag preview |
+| `isNameBlockedMessage(acct, msg)` | Messages from chats named in `blocked_chats.txt` | `DialogsSearchAdapter` message-search loop |
+| `isBlockedByName(obj)` | Users/chats named in `blocked_chats.txt` | `DialogsSearchAdapter.filter()` |
+| `isVisibleChannel(acct, chat)` | Keeps *only* subscribed channels | `DialogsChannelsAdapter` — recommendations loop + the three search-result loops |
 
-### External Hashtag Lookup Blocked
-| Feature | File | Key Functions/Locations |
-|---------|------|-------------------------|
-| Controller-layer gate | `HashtagSearchController.java` | `searchHashtag()` allow-rule |
-| "Public posts" tab hidden (global search) | `Components/SearchViewPager.java` | `updateItems()` `Item(PUBLIC_POSTS_TYPE)` commented out |
-| "Public Posts" tab hidden (chat hashtag search) | `ChatActivity.java` | hashtag search adapter `getItemCount()` returns 2 (was 3); `defaultSearchPage` clamped to 0 |
-| Inline preview API call blocked | `Adapters/DialogsSearchAdapter.java` | `if (finalHashtag != null) { ... TL_channels_searchPosts ... }` commented out |
+### Kill switches — suppressions that cannot be relocated
 
-### Link & Navigation Blocking
-| Feature | File | Key Functions/Locations |
-|---------|------|-------------------------|
-| Forward header (channels) | `ChatActivity.java` | `didPressChannelAvatar()` callback |
-| Forward header (bots) | `ChatActivity.java` | `didPressUserAvatar()` callback |
-| Channel reply icon clicks | `ChatActivity.java` | `didPressChannelAvatar()` - non-forward path |
-| Story channel links | `MessagesController.java` | `openChatOrProfileWith()` |
-| @mention clicks | `ChatActivity.java` | `URLSpanUserMention` handler |
-| Username navigation (cached) | `MessagesController.java` | `openByUserName()` - cached entity path |
-| Username navigation (async) | `MessagesController.java` | `openByUserName()` - async callback |
-| URL intent blocking | `LaunchActivity.java` | Username resolution callback |
-| Invite link blocking | `LaunchActivity.java` | `group != null` handler branch |
+The upstream code stays live behind each flag.
 
-### UI Modifications
-| Feature | File | Key Functions/Locations |
-|---------|------|-------------------------|
-| Edition branding | `ProfileActivity.java` | Version row display |
-| App name | `strings.xml` (all locales) | `AppName` string resource |
+| `Detox` member | Suppresses | Call sites |
+|---|---|---|
+| `SENSITIVE_BLOCKED` | 18+ content, everywhere | `MessagesController.showSensitiveContent()` (read), `setContentSettings()` (write), `getContentSettings()` callback (strips `"sensitive"` from `ignoreRestrictionReasons`); `ThemeActivity.updateRowsIds()` (hides the Settings toggle) |
+| `RECOMMENDATIONS_BLOCKED` | Similar Channels / Similar Bots | `MessagesController.getChannelRecommendations()` — returns null, so every consumer hides itself |
+| `PUBLIC_POSTS_BLOCKED` | The "Public posts" surfaces | `SearchViewPager.updateItems()` (global-search tab); `ChatActivity` hashtag tab strip — `getItemCount()` **and** `defaultSearchPage` (**hard-coupled: desyncing them makes `scrollToTab(2)` target a tab that is not there and crash**); `DialogsSearchAdapter` inline hashtag-preview request |
+| `PROFILE_CHANNEL_BLOCKED` | The "Personal Channel" row in user profiles | `ProfileActivity.updateRowsIds()` |
+| `AI_EDITOR_BLOCKED` | The AI Editor star button (input + media captions) | `MessagesController.aiEditorAvailable()` |
+
+### Not policy — plain build config
+`BuildVars.java`: `CHECK_UPDATES = false` (no in-app update prompts), `APP_ID` / `APP_HASH` from `local.properties`.
 
 ---
 
@@ -986,17 +973,26 @@ After merging from upstream:
 
 After resolving conflicts and before reporting the merge complete:
 
-1. **Walk the Feature → File Mapping table** (above) top-to-bottom. For each row, open the listed file and confirm the listed function still contains the matching `// CUSTOM:` block, anchored to the user-visible action the row describes. The most common failure mode after a large upstream merge is a custom guard that survived textually but is now attached to the wrong call-site (see commit `598bbcf26` for a historical example). This pass is what catches that.
+1. **Run the loss detector.** Every public member of `Detox` must have at least one call site in an upstream file. A member with zero call sites means the merge silently ate a guard. List the bindings and check them against the Detox Inventory above:
+   ```bash
+   grep -rn "Detox\." TMessagesProj/src/ --include="*.java" | grep -v "/Detox.java:"
+   ```
+   String constants are exempt — they are referenced only from inside `Detox` itself. Members used only inside `Detox` are `private` and never appear here.
 
-2. **Spot-check the Feature Testing Checklist** by greping for the user-facing strings (e.g. `"Subscribe to the channel first to view comments"`, `"Cannot open non-subscribed channels from mobile"`, `"Cannot join via invite links on mobile"`). Each should still appear at least once. Counts should be ≥ pre-merge.
+2. **Check call-site anchoring.** A binding being *present* is not enough — open it and confirm it is still attached to the user-visible action it is supposed to block. The classic failure after a large merge is a guard that survives textually but reattaches to the wrong call site (see commit `598bbcf26` for the historical example). `ChatActivity.java` is where this is most likely: it carries the largest upstream diff and hosts the most bindings.
 
-3. **Verify the Android package name is intact.** `gradle.properties` must still read `APP_PACKAGE=org.telegram.messenger.detox`, and `TMessagesProj_App/build.gradle` must still set `defaultConfig.applicationId = APP_PACKAGE` (not a hardcoded string). The afatRelease build's applicationId must end up as `org.telegram.messenger.detox` and afatDebug as `org.telegram.messenger.detox.beta`. Silent regression of this is a fork-killer: the app would install as stock Telegram with our code, side-by-side with no longer being distinguishable from the official app.
+3. **Confirm there are no `// CUSTOM:` markers.** The convention is retired; any that reappear came in from an old branch and represent policy living outside `Detox.java`:
+   ```bash
+   grep -rn "// CUSTOM:" TMessagesProj/src/
+   ```
 
-4. **Search for any `// MERGE-FLAG:` annotations** introduced during conflict resolution — these mark spots where a TLRPC type or interface may have changed shape and need verification during the build/compile pass.
+4. **Verify the Android package name is intact.** `gradle.properties` must still read `APP_PACKAGE=org.telegram.messenger.detox`, and `TMessagesProj_App/build.gradle` must still set `defaultConfig.applicationId = APP_PACKAGE` (not a hardcoded string). The afatRelease build's applicationId must end up as `org.telegram.messenger.detox` and afatDebug as `org.telegram.messenger.detox.beta`. Silent regression of this is a fork-killer: the app would install as stock Telegram with our code, no longer distinguishable from the official app.
 
-5. **Confirm the marker baseline.** The total `// CUSTOM:` marker count is currently **42 across 14 files** (`grep -rc "// CUSTOM:" TMessagesProj/src/ --include="*.java" | awk -F: '{s+=$2} END{print s}'`). A merge that drops the count below this baseline has lost a guard somewhere — investigate before reporting the merge complete.
+5. **Search for any `// MERGE-FLAG:` annotations** introduced during conflict resolution — these mark spots where a TLRPC type or interface may have changed shape. All must be resolved before the merge is done.
 
-This verification is intentionally code-level only. The build/runtime test happens once after all in-flight feature work for the merge has landed.
+6. **Build.** `./gradlew assembleAfatRelease` must be green. The compiler is the primary gate: a binding that lost its call site is a compile error, not a silent behavior change.
+
+7. **Audit new upstream features.** A minor-version bump usually ships new surfaces. Diff the upstream range and look for anything shaped like discovery: new search entry points, recommendation surfaces, feeds, new tabs, new calls into public-content APIs (`TL_*search*`, `TL_*recommend*`, `TL_*public*`, `TL_*suggest*`), new server-config-gated features in `MessagesController`'s app_config parsing. A single server-gated boolean (as with `aiEditorAvailable()`) is usually the cheapest place to block.
 
 #### Recommended Update Schedule
 

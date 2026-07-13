@@ -117,7 +117,7 @@ public class Detox {
     }
 
     /** blocked_chats.txt - case-insensitive substring match on the chat/user display name. */
-    public static boolean isNameBlocked(String name) {
+    private static boolean isNameBlocked(String name) {
         if (!chatBlocklistLoaded) {
             chatBlocklistLoaded = load("blocked_chats.txt", BLOCKED_CHAT_NAMES);
         }
@@ -125,7 +125,7 @@ public class Detox {
     }
 
     /** blocked_comments.txt - channels we read but do not engage with. */
-    public static boolean isCommentBlocked(TLRPC.Chat chat) {
+    private static boolean isCommentBlocked(TLRPC.Chat chat) {
         if (chat == null) {
             return false;
         }
